@@ -1,0 +1,1117 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Terrazas de Salónica</title>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,600;0,700;1,300&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --cream: #F5F0E8; --warm-white: #FDFAF4; --ink: #1A1714;
+      --brown: #5C3D2E; --gold: #C9963A; --gold-light: #E8B95A;
+      --green: #2D6A4F; --red: #B33A3A; --red-light: #E07070;
+      --gray: #8A8278; --gray-light: #DDD8CF;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    html, body { height: 100%; background: var(--cream); font-family: 'DM Sans', sans-serif; color: var(--ink); overflow: hidden; }
+    #app { display: flex; flex-direction: column; height: 100dvh; max-width: 480px; margin: 0 auto; background: var(--warm-white); overflow: hidden; }
+
+    /* HEADER */
+    header { background: var(--ink); color: var(--cream); padding: 18px 20px 16px; flex-shrink: 0; }
+    .header-top { display: flex; justify-content: space-between; align-items: flex-start; }
+    .header-title { font-family: 'Fraunces', serif; font-size: 21px; font-weight: 600; letter-spacing: -0.3px; line-height: 1.1; }
+    .header-sub { font-size: 11px; color: var(--gray); margin-top: 2px; letter-spacing: 0.5px; text-transform: uppercase; }
+    .version-badge { font-size: 10px; font-weight: 600; background: rgba(201,150,58,0.2); color: var(--gold-light); border: 1px solid rgba(201,150,58,0.3); border-radius: 20px; padding: 2px 8px; font-family: monospace; flex-shrink: 0; }
+    .saldo-strip { margin-top: 14px; background: rgba(255,255,255,0.06); border-radius: 10px; padding: 12px 14px; display: flex; justify-content: space-between; align-items: center; }
+    .saldo-label { font-size: 11px; color: var(--gray); text-transform: uppercase; letter-spacing: 0.6px; }
+    .saldo-value { font-family: 'Fraunces', serif; font-size: 26px; font-weight: 700; color: var(--gold-light); letter-spacing: -0.5px; }
+    .saldo-value.negative { color: var(--red-light); }
+
+    /* NAV */
+    nav { display: flex; background: var(--ink); padding: 0 20px 14px; gap: 6px; flex-shrink: 0; }
+    .tab { flex: 1; padding: 8px 4px; border: none; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 500; cursor: pointer; transition: all 0.2s; background: rgba(255,255,255,0.08); color: var(--gray); }
+    .tab.active { background: var(--gold); color: var(--ink); font-weight: 600; }
+
+    /* SCREENS */
+    .screen { display: none; flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 16px; }
+    .screen.active { display: block; }
+    .screen::-webkit-scrollbar { width: 0; }
+
+    .section-title { font-family: 'Fraunces', serif; font-size: 13px; font-weight: 600; color: var(--gray); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; margin-top: 4px; }
+    .nota-box { background: rgba(201,150,58,0.08); border: 1px solid rgba(201,150,58,0.25); border-radius: 10px; padding: 10px 14px; margin-bottom: 14px; font-size: 12px; color: var(--brown); line-height: 1.5; }
+
+    /* QUICK BUTTONS */
+    .quick-btns { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+    .quick-btn { display: flex; align-items: center; gap: 14px; background: var(--warm-white); border: 1.5px solid var(--gray-light); border-radius: 14px; padding: 14px 16px; cursor: pointer; text-align: left; width: 100%; transition: all 0.15s; }
+    .quick-btn:active { transform: scale(0.98); background: var(--cream); }
+    .qb-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+    .ic-admin { background: rgba(45,106,79,0.12); } .ic-energy { background: rgba(201,150,58,0.12); }
+    .ic-security { background: rgba(92,61,46,0.12); } .ic-plus { background: rgba(26,23,20,0.08); }
+    .ic-minus { background: rgba(179,58,58,0.1); } .ic-mail { background: rgba(59,95,191,0.12); }
+    .qb-text { flex: 1; }
+    .qb-label { font-size: 14px; font-weight: 600; color: var(--ink); }
+    .qb-sub { font-size: 12px; color: var(--gray); margin-top: 1px; }
+    .qb-amount { font-family: 'Fraunces', serif; font-size: 16px; font-weight: 600; color: var(--green); flex-shrink: 0; }
+    .qb-amount.e { color: var(--red); }
+    .qb-amount.m { color: #3B5FBF; }
+
+    /* MOV ITEMS */
+    .mov-list { display: flex; flex-direction: column; gap: 6px; }
+    .mov-item { background: var(--warm-white); border: 1px solid var(--gray-light); border-radius: 10px; padding: 11px 14px; }
+    .mov-item-top { display: flex; align-items: center; gap: 10px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .dot.ingreso { background: var(--green); } .dot.egreso { background: var(--red); }
+    .mov-desc { flex: 1; font-size: 13px; color: var(--ink); line-height: 1.3; }
+    .mov-meta { font-size: 11px; color: var(--gray); margin-top: 2px; }
+    .mov-amt { font-family: 'Fraunces', serif; font-size: 14px; font-weight: 600; flex-shrink: 0; }
+    .mov-amt.ingreso { color: var(--green); } .mov-amt.egreso { color: var(--red); }
+    .mov-actions { display: flex; gap: 6px; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--cream); }
+    .mab { flex: 1; padding: 6px; border: 1.5px solid var(--gray-light); border-radius: 8px; background: none; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; color: var(--gray); }
+    .mab.del { color: var(--red-light); border-color: rgba(179,58,58,0.25); }
+
+    /* CONCEPTO CARDS */
+    .concepto-card { background: var(--warm-white); border: 1.5px solid var(--gray-light); border-radius: 14px; padding: 14px 16px; margin-bottom: 10px; }
+    .cc-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+    .cc-nombre { font-size: 14px; font-weight: 600; color: var(--ink); flex: 1; line-height: 1.3; }
+    .cc-año { font-family: 'Fraunces', serif; font-size: 16px; font-weight: 700; flex-shrink: 0; }
+    .cc-año.ing { color: var(--green); } .cc-año.egr { color: var(--red); }
+    .cc-mes-row { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--gray-light); }
+    .cc-mes-lbl { font-size: 11px; color: var(--gray); text-transform: uppercase; letter-spacing: 0.5px; }
+    .cc-mes-val { font-family: 'Fraunces', serif; font-size: 14px; font-weight: 600; }
+    .cc-mes-val.ing { color: var(--green); } .cc-mes-val.egr { color: var(--red); }
+    .cc-count { font-size: 11px; color: var(--gray); margin-top: 2px; }
+
+    /* MES CARDS */
+    .mes-card { background: var(--warm-white); border: 1.5px solid var(--gray-light); border-radius: 14px; padding: 14px 16px; margin-bottom: 10px; cursor: pointer; }
+    .mc-top { display: flex; justify-content: space-between; align-items: center; }
+    .mc-nombre { font-family: 'Fraunces', serif; font-size: 16px; font-weight: 600; }
+    .mc-bal { font-family: 'Fraunces', serif; font-size: 16px; font-weight: 700; }
+    .mc-bal.pos { color: var(--green); } .mc-bal.neg { color: var(--red); }
+    .bars { display: flex; gap: 6px; margin-top: 10px; }
+    .bar-wrap { flex: 1; }
+    .bar-lbl { font-size: 10px; color: var(--gray); margin-bottom: 3px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .bar-track { height: 5px; background: var(--gray-light); border-radius: 3px; overflow: hidden; }
+    .bar-fill { height: 100%; border-radius: 3px; }
+    .bar-fill.i { background: var(--green); } .bar-fill.e { background: var(--red); }
+    .bar-val { font-size: 11px; color: var(--ink); font-weight: 500; margin-top: 3px; }
+    .mes-detail { display: none; margin-top: 10px; border-top: 1px solid var(--gray-light); padding-top: 10px; }
+    .mes-card.open .mes-detail { display: block; }
+    .drow { display: flex; align-items: flex-start; padding: 6px 0; border-bottom: 1px solid var(--cream); gap: 8px; }
+    .drow:last-child { border-bottom: none; }
+    .chip { display: inline-block; padding: 2px 7px; border-radius: 6px; font-size: 10px; font-weight: 700; flex-shrink: 0; }
+    .chip.i { background: rgba(45,106,79,0.1); color: var(--green); } .chip.e { background: rgba(179,58,58,0.1); color: var(--red); }
+    .drow-desc { font-size: 12px; color: var(--ink); flex: 1; line-height: 1.3; }
+    .drow-amt { font-size: 12px; font-weight: 600; flex-shrink: 0; }
+    .drow-amt.i { color: var(--green); } .drow-amt.e { color: var(--red); }
+
+    /* YEAR CARDS */
+    .year-card { background: var(--warm-white); border: 1.5px solid var(--gray-light); border-radius: 14px; padding: 14px 16px; margin-bottom: 10px; cursor: pointer; }
+    .yc-top { display: flex; justify-content: space-between; align-items: center; }
+    .yc-label { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 700; }
+    .yb { font-size: 11px; padding: 3px 10px; border-radius: 20px; font-weight: 600; }
+    .yb.pos { background: rgba(45,106,79,0.1); color: var(--green); }
+    .yb.neg { background: rgba(179,58,58,0.1); color: var(--red); }
+    .ynums { display: flex; gap: 20px; margin-top: 10px; }
+    .ynum { flex: 1; }
+    .ynum-lbl { font-size: 10px; color: var(--gray); text-transform: uppercase; letter-spacing: 0.5px; }
+    .ynum-val { font-family: 'Fraunces', serif; font-size: 15px; font-weight: 600; margin-top: 2px; }
+    .ydet { display: none; margin-top: 10px; border-top: 1px solid var(--gray-light); padding-top: 10px; }
+    .year-card.open .ydet { display: block; }
+
+    /* TOTALES GRID */
+    .tot-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+    .tot-card { background: var(--warm-white); border: 1.5px solid var(--gray-light); border-radius: 12px; padding: 12px 14px; }
+    .tot-lbl { font-size: 10px; color: var(--gray); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+    .tot-val { font-family: 'Fraunces', serif; font-size: 18px; font-weight: 700; }
+
+    /* SEARCH */
+
+
+    /* MODALS */
+    .modal-bg { position: fixed; inset: 0; background: rgba(26,23,20,0.6); backdrop-filter: blur(4px); z-index: 100; display: none; align-items: flex-end; justify-content: center; }
+    .modal-bg.open { display: flex; }
+    .modal { background: var(--warm-white); border-radius: 20px 20px 0 0; padding: 24px 20px 36px; width: 100%; max-width: 480px; animation: slideUp 0.25s ease; max-height: 92dvh; overflow-y: auto; }
+    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    .modal-title { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 600; margin-bottom: 20px; }
+    .modal-title span { font-size: 11px; font-family: 'DM Sans', sans-serif; font-weight: 400; color: var(--gray); margin-left: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .field { margin-bottom: 14px; }
+    .field label { display: block; font-size: 12px; font-weight: 600; color: var(--gray); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+    .field input, .field select { width: 100%; padding: 12px 14px; border: 1.5px solid var(--gray-light); border-radius: 10px; font-family: 'DM Sans', sans-serif; font-size: 15px; background: var(--cream); color: var(--ink); outline: none; }
+    .field input:focus, .field select:focus { border-color: var(--gold); }
+    .casa-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .casa-btn { padding: 12px; border: 2px solid var(--gray-light); border-radius: 10px; background: var(--cream); font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; color: var(--ink); transition: all 0.15s; }
+    .casa-btn.selected { border-color: var(--green); background: rgba(45,106,79,0.08); color: var(--green); }
+    .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+    .btn-cancel { flex: 1; padding: 14px; border: 2px solid var(--gray-light); border-radius: 12px; background: var(--cream); font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 600; cursor: pointer; color: var(--gray); }
+    .btn-save { flex: 2; padding: 14px; border: none; border-radius: 12px; background: var(--ink); font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 600; cursor: pointer; color: var(--cream); }
+    .btn-save:active { opacity: 0.85; }
+    .btn-save.ingreso { background: var(--green); }
+    .btn-save.egreso { background: var(--red); }
+    .btn-save.send { background: #3B5FBF; }
+    .btn-save:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    /* CONFIRM */
+    .confirm-bg { position: fixed; inset: 0; background: rgba(26,23,20,0.7); backdrop-filter: blur(4px); z-index: 200; display: none; align-items: center; justify-content: center; padding: 20px; }
+    .confirm-bg.open { display: flex; }
+    .confirm-box { background: var(--warm-white); border-radius: 16px; padding: 24px 20px 20px; width: 100%; max-width: 340px; text-align: center; animation: fadeIn 0.2s ease; }
+    @keyframes fadeIn { from { opacity:0; transform:scale(0.95); } to { opacity:1; transform:scale(1); } }
+    .confirm-icon { font-size: 36px; margin-bottom: 10px; }
+    .confirm-msg { font-size: 15px; color: var(--ink); line-height: 1.5; margin-bottom: 6px; font-weight: 600; }
+    .confirm-sub { font-size: 13px; color: var(--gray); margin-bottom: 20px; line-height: 1.4; }
+    .confirm-btns { display: flex; gap: 10px; }
+    .confirm-no { flex:1; padding: 12px; border: 2px solid var(--gray-light); border-radius: 10px; background: none; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; color: var(--gray); }
+    .confirm-yes { flex:1; padding: 12px; border: none; border-radius: 10px; background: var(--red); font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; color: white; }
+
+    /* TOAST */
+    .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--cream); padding: 12px 20px; border-radius: 20px; font-size: 13px; font-weight: 500; z-index: 300; opacity: 0; transition: opacity 0.3s; pointer-events: none; white-space: nowrap; }
+    .toast.show { opacity: 1; }
+
+    .empty { text-align: center; padding: 30px 20px; color: var(--gray); }
+    .empty-icon { font-size: 36px; margin-bottom: 8px; }
+    .empty-text { font-size: 14px; }
+    .config-card { background: var(--warm-white); border: 1.5px solid var(--gray-light); border-radius: 14px; padding: 16px 18px; }
+    .config-card-title { font-size: 15px; font-weight: 600; color: var(--ink); margin-bottom: 4px; }
+    .config-card-sub { font-size: 12px; color: var(--gray); line-height: 1.5; }
+    .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.4); border-top-color: white; border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle; margin-right: 6px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <header>
+    <div class="header-top">
+      <div>
+        <div class="header-title">Terrazas de Salónica</div>
+        <div class="header-sub">Administración · Cuentas</div>
+      </div>
+      <div class="version-badge">v1.0</div>
+    </div>
+    <div class="saldo-strip">
+      <div>
+        <div class="saldo-label">Saldo disponible</div>
+        <div class="saldo-value" id="saldo-header">$0</div>
+      </div>
+      <div style="text-align:right">
+        <div class="saldo-label">Mes en curso</div>
+        <div style="font-size:11px;color:var(--gray);margin-top:2px" id="mes-header">—</div>
+      </div>
+    </div>
+  </header>
+
+  <nav>
+    <button class="tab active" onclick="showScreen('home')">🏠 Inicio</button>
+    <button class="tab" onclick="showScreen('conceptos')">📌 Conceptos</button>
+    <button class="tab" onclick="showScreen('resumen')">📊 Resumen</button>
+    <button class="tab" onclick="showScreen('historico')">📁 Histórico</button>
+    <button class="tab" onclick="showScreen('config')">⚙️ Config</button>
+  </nav>
+
+  <!-- INICIO -->
+  <div class="screen active" id="screen-home">
+    <div class="section-title">Registro rápido</div>
+    <div class="quick-btns">
+      <button class="quick-btn" onclick="openQuick('admin')">
+        <div class="qb-icon ic-admin">🏠</div>
+        <div class="qb-text"><div class="qb-label">Cuota administración</div><div class="qb-sub">Pago mensual por casa · <strong>Fijo</strong></div></div>
+        <div class="qb-amount">$1.080.000</div>
+      </button>
+      <button class="quick-btn" onclick="openQuick('westpoint')">
+        <div class="qb-icon ic-security">🛡️</div>
+        <div class="qb-text"><div class="qb-label">West Point Security</div><div class="qb-sub">Servicio de conserjería · <strong>Fijo</strong></div></div>
+        <div class="qb-amount e">$3.434.861</div>
+      </button>
+      <button class="quick-btn" onclick="openQuick('energia')">
+        <div class="qb-icon ic-energy">⚡</div>
+        <div class="qb-text"><div class="qb-label">Energía zonas comunes</div><div class="qb-sub">Factura mensual (monto variable)</div></div>
+        <div class="qb-amount e">Ingresar</div>
+      </button>
+      <button class="quick-btn" onclick="openManual('ingreso')">
+        <div class="qb-icon ic-plus">➕</div>
+        <div class="qb-text"><div class="qb-label">Otro ingreso</div><div class="qb-sub">Cuota extra, otro concepto...</div></div>
+        <div class="qb-amount">Manual</div>
+      </button>
+      <button class="quick-btn" onclick="openManual('egreso')">
+        <div class="qb-icon ic-minus">➖</div>
+        <div class="qb-text"><div class="qb-label">Otro gasto</div><div class="qb-sub">Mantenimiento, compras, etc.</div></div>
+        <div class="qb-amount e">Manual</div>
+      </button>
+      <button class="quick-btn" onclick="openEmail()">
+        <div class="qb-icon ic-mail">📧</div>
+        <div class="qb-text"><div class="qb-label">Enviar reporte por correo</div><div class="qb-sub">hedacas · blancachechi · diegoosoc</div></div>
+        <div class="qb-amount m">Enviar</div>
+      </button>
+
+    </div>
+    <div class="section-title">Movimientos recientes</div>
+    <div class="mov-list" id="mov-list"></div>
+  </div>
+
+  <!-- CONCEPTOS -->
+  <div class="screen" id="screen-conceptos">
+    <div class="nota-box">📌 Totales por concepto — mes actual y año completo 2026.</div>
+    <div id="conceptos-content"></div>
+  </div>
+
+  <!-- RESUMEN -->
+  <div class="screen" id="screen-resumen">
+    <div class="nota-box">📊 Resumen mes a mes. Toca cada tarjeta para ver el detalle.</div>
+    <div id="resumen-content"></div>
+  </div>
+
+  <!-- HISTÓRICO -->
+  <div class="screen" id="screen-historico">
+    <div class="nota-box">📁 Totales de ingresos, egresos y balance por cada año desde 2005.</div>
+    <div id="historico-content"></div>
+  </div>
+
+  <!-- CONFIGURACIÓN -->
+  <div class="screen" id="screen-config">
+    <div class="section-title">Google Sheets</div>
+    <div class="nota-box">📌 <strong>Sin riesgo de pérdida:</strong> el Sheets solo agrega filas nuevas, nunca borra. Ediciones y eliminaciones quedan como notas de corrección.</div>
+
+    <div class="config-card">
+      <div class="config-card-title">🔗 URL del script</div>
+      <div class="config-card-sub">Pégala una sola vez y queda guardada en el celular.</div>
+      <input type="url" id="sheets-url-input"
+        placeholder="https://script.google.com/macros/s/.../exec"
+        style="width:100%;padding:12px 14px;border:1.5px solid var(--gray-light);border-radius:10px;font-family:'DM Sans',sans-serif;font-size:13px;background:var(--cream);color:var(--ink);outline:none;margin-top:10px">
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button class="btn-save ingreso" style="flex:1;padding:12px;font-size:14px" onclick="saveSheetsConfig()">✓ Guardar URL</button>
+        <button class="btn-cancel" style="flex:1;padding:12px;font-size:14px" onclick="document.getElementById('sheets-url-input').value=''">Limpiar</button>
+      </div>
+      <div id="config-url-status" style="font-size:12px;color:var(--gray);margin-top:8px;text-align:center"></div>
+    </div>
+
+    <div class="config-card" style="margin-top:14px">
+      <div class="config-card-title">📋 ¿Cómo obtener la URL?</div>
+      <div style="font-size:12px;color:var(--gray);line-height:1.9;margin-top:8px">
+        1. Abre Google Sheets → <strong>Extensiones → Apps Script</strong><br>
+        2. Pega el código del archivo <code style="background:var(--cream);padding:1px 5px;border-radius:4px">terrazas_script.gs</code><br>
+        3. <strong>Implementar → Nueva implementación → App web</strong><br>
+        4. Ejecutar como: <strong>Yo</strong> · Acceso: <strong>Cualquier persona</strong><br>
+        5. Copia la URL <code style="background:var(--cream);padding:1px 5px;border-radius:4px">/exec</code> y pégala arriba
+      </div>
+    </div>
+
+    <div class="section-title" style="margin-top:20px">Backup manual</div>
+    <div class="nota-box">El backup automático llega el día 1 de cada mes a tu correo. Aquí puedes enviarlo en cualquier momento.</div>
+
+    <div class="config-card">
+      <div class="config-card-title">📦 Enviar backup ahora</div>
+      <div class="config-card-sub">Se enviará a <strong>diegoosoc@gmail.com</strong> con el detalle completo de todos los movimientos registrados.</div>
+      <button class="btn-save send" style="width:100%;padding:14px;font-size:15px;margin-top:12px" onclick="enviarBackupEmail()">📦 Enviar backup por correo</button>
+    </div>
+
+    <div class="config-card" style="margin-top:14px">
+      <div class="config-card-title">📊 Sincronizar con Sheets ahora</div>
+      <div class="config-card-sub" id="sync-sub">Envía todos los movimientos al Sheets. Útil la primera vez o si quieres un resync completo.</div>
+      <button class="btn-save" style="width:100%;padding:14px;font-size:15px;margin-top:12px;background:#34A853" onclick="syncAllToSheets()">📊 Sincronizar con Google Sheets</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL ADMIN -->
+<div class="modal-bg" id="modal-admin">
+  <div class="modal">
+    <div class="modal-title">Cuota administración <span>INGRESO</span></div>
+    <div class="field"><label>Casa</label>
+      <div class="casa-grid">
+        <button class="casa-btn" onclick="selectCasa(1)" id="casa-btn-1">Casa 1</button>
+        <button class="casa-btn" onclick="selectCasa(2)" id="casa-btn-2">Casa 2</button>
+        <button class="casa-btn" onclick="selectCasa(3)" id="casa-btn-3">Casa 3</button>
+        <button class="casa-btn" onclick="selectCasa(4)" id="casa-btn-4">Casa 4</button>
+      </div>
+    </div>
+    <div class="field"><label>Mes que paga</label><select id="admin-mes" onchange="onAdminMesChange()"></select></div>
+    <div class="field"><label>Monto</label><input type="number" id="admin-monto" value="1080000"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('modal-admin')">Cancelar</button>
+      <button class="btn-save ingreso" onclick="saveAdmin()">✓ Registrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL ENERGIA -->
+<div class="modal-bg" id="modal-energia">
+  <div class="modal">
+    <div class="modal-title">Energía zonas comunes <span>EGRESO</span></div>
+    <div class="field"><label>Monto factura</label><input type="number" id="energia-monto" placeholder="Ej: 320000"></div>
+    <div class="field"><label>Nota (opcional)</label><input type="text" id="energia-nota" placeholder="Ej: Factura vencimiento 3-abril"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('modal-energia')">Cancelar</button>
+      <button class="btn-save egreso" onclick="saveEgresoRapido('energia')">✓ Registrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL WESTPOINT -->
+<div class="modal-bg" id="modal-westpoint">
+  <div class="modal">
+    <div class="modal-title">West Point Security <span>EGRESO</span></div>
+    <div class="field"><label>Monto mensualidad</label><input type="number" id="security-monto" value="3434861"></div>
+    <div class="field"><label>Mes del servicio</label><select id="security-mes"></select></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('modal-westpoint')">Cancelar</button>
+      <button class="btn-save egreso" onclick="saveEgresoRapido('westpoint')">✓ Registrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL MANUAL -->
+<div class="modal-bg" id="modal-manual">
+  <div class="modal">
+    <div class="modal-title" id="manual-title">Registrar movimiento</div>
+    <div class="field"><label>Descripción</label><input type="text" id="manual-desc" placeholder="Describe el movimiento..."></div>
+    <div class="field"><label>Monto ($)</label><input type="number" id="manual-monto" placeholder="0"></div>
+    <div class="field"><label>Mes</label><select id="manual-mes"></select></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('modal-manual')">Cancelar</button>
+      <button class="btn-save" id="manual-save-btn" onclick="saveManual()">✓ Registrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL EDITAR -->
+<div class="modal-bg" id="modal-editar">
+  <div class="modal">
+    <div class="modal-title">Editar movimiento</div>
+    <div class="field"><label>Descripción</label><input type="text" id="edit-desc"></div>
+    <div class="field"><label>Monto ($)</label><input type="number" id="edit-monto"></div>
+    <div class="field"><label>Mes</label><select id="edit-mes"></select></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('modal-editar')">Cancelar</button>
+      <button class="btn-save" id="edit-save-btn" onclick="saveEdit()">✓ Guardar cambios</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL EMAIL -->
+<div class="modal-bg" id="modal-email">
+  <div class="modal">
+    <div class="modal-title">Enviar reporte 📧</div>
+    <div class="field"><label>Período del reporte</label>
+      <select id="email-periodo">
+        <option value="mes">Solo el mes actual</option>
+        <option value="año" selected>Todo el año 2026</option>
+      </select>
+    </div>
+    <div class="field"><label>Destinatarios</label>
+      <div style="font-size:13px;color:var(--gray);line-height:2;padding:10px 14px;background:var(--cream);border-radius:10px;border:1.5px solid var(--gray-light)">
+        📬 hedacas@hotmail.com<br>📬 blancachechi@hotmail.com<br>📬 diegoosoc@gmail.com
+      </div>
+    </div>
+    <div class="nota-box" style="margin-top:8px">El reporte se abrirá en una nueva ventana. Para el backup personal usa el botón <strong>📦 Enviar backup</strong> desde la pantalla de inicio.</div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('modal-email')">Cancelar</button>
+      <button class="btn-save send" id="email-send-btn" onclick="enviarReporte()">📤 Enviar reporte</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL SHEETS CONFIG -->
+<!-- CONFIRM DELETE -->
+<div class="confirm-bg" id="confirm-bg">
+  <div class="confirm-box">
+    <div class="confirm-icon">🗑️</div>
+    <div class="confirm-msg">¿Eliminar este movimiento?</div>
+    <div class="confirm-sub" id="confirm-sub">Esta acción no se puede deshacer.</div>
+    <div class="confirm-btns">
+      <button class="confirm-no" onclick="closeConfirm()">No, cancelar</button>
+      <button class="confirm-yes" onclick="confirmDelete()">Sí, eliminar</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONFIRM EMAIL -->
+<div class="confirm-bg" id="confirm-email-bg">
+  <div class="confirm-box">
+    <div class="confirm-icon">📧</div>
+    <div class="confirm-msg">¿Enviar el reporte?</div>
+    <div class="confirm-sub" id="confirm-email-sub">Se enviará a los 3 destinatarios y se abrirá en pantalla.</div>
+    <div class="confirm-btns">
+      <button class="confirm-no" onclick="closeEmailConfirm()">No, cancelar</button>
+      <button class="confirm-yes" style="background:#3B5FBF" onclick="confirmarEnvio()">Sí, enviar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── DATA ──────────────────────────────────────
+const EMAILS = ['hedacas@hotmail.com','blancachechi@hotmail.com','diegoosoc@gmail.com'];
+const BACKUP_EMAIL = 'diegoosoc@gmail.com';
+const SALDO_INICIAL = 307572;
+const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const MESES_KEY = ['2026-01','2026-02','2026-03','2026-04','2026-05','2026-06','2026-07','2026-08','2026-09','2026-10','2026-11','2026-12'];
+
+const MOVS_EXCEL = [
+  {id:'e1',fecha:'2026-01',descripcion:'Cuota Enero - Casa 1',tipo:'ingreso',monto:960000,fuente:'excel'},
+  {id:'e2',fecha:'2026-01',descripcion:'Cuota Enero - Casas 2 y 3',tipo:'ingreso',monto:1920000,fuente:'excel'},
+  {id:'e3',fecha:'2026-01',descripcion:'Cuota Enero - Casa 4',tipo:'ingreso',monto:960000,fuente:'excel'},
+  {id:'e4',fecha:'2026-01',descripcion:'Energía zonas comunes',tipo:'egreso',monto:269150,fuente:'excel'},
+  {id:'e5',fecha:'2026-01',descripcion:'Conserjería West Point Security — Enero',tipo:'egreso',monto:3711000,fuente:'excel'},
+  {id:'e6',fecha:'2026-01',descripcion:'Bono conserje por apoyos fuera de jornada',tipo:'egreso',monto:220000,fuente:'excel'},
+  {id:'e7',fecha:'2026-02',descripcion:'Cuota Febrero - Casa 1',tipo:'ingreso',monto:1080000,fuente:'excel'},
+  {id:'e8',fecha:'2026-02',descripcion:'Cuota Febrero - Casas 2, 3 y 4',tipo:'ingreso',monto:3240000,fuente:'excel'},
+  {id:'e9',fecha:'2026-02',descripcion:'Conserjería West Point Security — Febrero',tipo:'egreso',monto:3422248,fuente:'excel'},
+  {id:'e10',fecha:'2026-02',descripcion:'Energía zonas comunes — Factura 03-03-2026',tipo:'egreso',monto:269150,fuente:'excel'},
+  {id:'e11',fecha:'2026-02',descripcion:'Bono conserje por apoyos fuera de jornada',tipo:'egreso',monto:450000,fuente:'excel'},
+  {id:'e12',fecha:'2026-03',descripcion:'Cuota Marzo - Casa 2',tipo:'ingreso',monto:1080000,fuente:'excel'},
+];
+
+const HISTORICO_ANUAL = [
+  {year:2005,total_ingresos:3863185,total_egresos:4163710,balance:-300525},
+  {year:2006,total_ingresos:8060000,total_egresos:9085845,balance:-1025845},
+  {year:2007,total_ingresos:12870000,total_egresos:14175845,balance:-1305845},
+  {year:2008,total_ingresos:14000000,total_egresos:13736055,balance:263945},
+  {year:2009,total_ingresos:16800000,total_egresos:14804290,balance:1995710},
+  {year:2010,total_ingresos:17150000,total_egresos:14555168,balance:2594832},
+  {year:2011,total_ingresos:18800000,total_egresos:16006276,balance:2793724},
+  {year:2012,total_ingresos:19200000,total_egresos:18146206,balance:1053794},
+  {year:2013,total_ingresos:19200000,total_egresos:18537626,balance:662374},
+  {year:2014,total_ingresos:19200000,total_egresos:19527740,balance:-327740},
+  {year:2015,total_ingresos:21600000,total_egresos:20458250,balance:1141750},
+  {year:2016,total_ingresos:22800000,total_egresos:22227818,balance:572182},
+  {year:2017,total_ingresos:24000000,total_egresos:25232580,balance:-1232580},
+  {year:2018,total_ingresos:26350000,total_egresos:26811690,balance:-461690},
+  {year:2019,total_ingresos:28800000,total_egresos:27410303,balance:1389697},
+  {year:2020,total_ingresos:28800000,total_egresos:28152480,balance:647520},
+  {year:2021,total_ingresos:28800000,total_egresos:27517068,balance:1282932},
+  {year:2022,total_ingresos:32100000,total_egresos:30519058,balance:1580942},
+  {year:2023,total_ingresos:38000000,total_egresos:38261050,balance:-261050},
+  {year:2024,total_ingresos:42700000,total_egresos:42992470,balance:-292470},
+  {year:2025,total_ingresos:47440000,total_egresos:47206699,balance:233301},
+];
+
+// ── STATE ─────────────────────────────────────
+let movimientos = [];
+let selectedCasa = null;
+let modalTipo = 'ingreso';
+let pendingDeleteId = null;
+let editingId = null;
+
+// ── STORAGE ───────────────────────────────────
+async function loadMovimientos() {
+  try {
+    // Intentar clave actual
+    const r = await window.storage.get('terrazas_movs_v2');
+    if (r) { movimientos = JSON.parse(r.value); return; }
+    // Migrar desde clave antigua si existe
+    const old = await window.storage.get('terrazas_movs');
+    if (old) { movimientos = JSON.parse(old.value); await saveMovimientos(); }
+  } catch(e){ movimientos=[]; }
+}
+async function saveMovimientos() {
+  try { await window.storage.set('terrazas_movs_v2', JSON.stringify(movimientos)); } catch(e){}
+}
+
+// ── HELPERS ───────────────────────────────────
+function allMovs() { return [...MOVS_EXCEL,...movimientos].sort((a,b)=>a.fecha.localeCompare(b.fecha)); }
+function getSaldo() { return Math.round(allMovs().reduce((s,m)=>m.tipo==='ingreso'?s+m.monto:s-m.monto, SALDO_INICIAL)); }
+function getMesActual() { const n=new Date(); return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}`; }
+function getMesLabel(k) { const [y,m]=k.split('-'); return MESES[+m-1]+' '+y; }
+function fmt(n) {
+  // Formato pesos colombianos: $1.206.024
+  const rounded = Math.round(n); // evita decimales por float
+  const abs = Math.abs(rounded);
+  const s = abs.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  return (rounded < 0 ? '-' : '') + '$' + s;
+}
+function genId() { return 'u'+Date.now()+Math.random().toString(36).slice(2,5); }
+
+function getConcepto(m) {
+  const d=m.descripcion.toLowerCase();
+  if(d.includes('west point')||d.includes('westpoint')||d.includes('conserjería')||d.includes('consergeria')||d.includes('conserjeria')) return 'West Point Security';
+  if(d.includes('energía')||d.includes('energia')||d.includes('alumbrado')) return 'Energía zonas comunes';
+  if((d.includes('cuota')||d.includes('administración')||d.includes('administracion'))&&m.tipo==='ingreso') return 'Cuotas administración';
+  if(d.includes('bono conserje')||d.includes('bono conseje')) return 'Bonos conserje';
+  return 'Otros';
+}
+
+// ── RENDER HEADER ─────────────────────────────
+function renderHeader() {
+  const s=getSaldo(), el=document.getElementById('saldo-header');
+  el.textContent=fmt(s); el.className='saldo-value'+(s<0?' negative':'');
+  document.getElementById('mes-header').textContent=MESES[+getMesActual().split('-')[1]-1]+' 2026';
+}
+
+// ── RENDER HOME ───────────────────────────────
+function renderHome() {
+  const list=document.getElementById('mov-list');
+  const rec=[...allMovs()].reverse().slice(0,30);
+  if(!rec.length){list.innerHTML='<div class="empty"><div class="empty-icon">📋</div><div class="empty-text">Sin movimientos aún</div></div>';return;}
+  list.innerHTML=rec.map(m=>{
+    const canEdit=!m.fuente;
+    const acts=canEdit?`<div class="mov-actions">
+      <button class="mab" onclick="openEdit('${m.id}')">✏️ Editar</button>
+      <button class="mab del" onclick="askDelete('${m.id}','${m.descripcion.replace(/'/g,"\\'")}')">🗑️ Eliminar</button>
+    </div>`:'';
+    return `<div class="mov-item">
+      <div class="mov-item-top">
+        <div class="dot ${m.tipo}"></div>
+        <div style="flex:1"><div class="mov-desc">${m.descripcion}</div><div class="mov-meta">${getMesLabel(m.fecha)}</div></div>
+        <div class="mov-amt ${m.tipo}">${m.tipo==='ingreso'?'+':'-'}${fmt(m.monto)}</div>
+      </div>${acts}
+    </div>`;
+  }).join('');
+}
+
+// ── RENDER CONCEPTOS ──────────────────────────
+function renderConceptos() {
+  const mesKey=getMesActual(), all=allMovs(), grupos={};
+  for(const m of all){
+    const c=getConcepto(m);
+    if(!grupos[c]) grupos[c]={mesIng:0,mesEgr:0,añoIng:0,añoEgr:0,count:0,countMes:0};
+    const esMes=m.fecha===mesKey;
+    if(m.tipo==='ingreso'){grupos[c].añoIng+=m.monto;if(esMes){grupos[c].mesIng+=m.monto;grupos[c].countMes++;}}
+    else{grupos[c].añoEgr+=m.monto;if(esMes){grupos[c].mesEgr+=m.monto;grupos[c].countMes++;}}
+    grupos[c].count++;
+  }
+  const orden=['Cuotas administración','West Point Security','Energía zonas comunes','Bonos conserje','Otros'];
+  let html='';
+  for(const nombre of orden){
+    const g=grupos[nombre]; if(!g) continue;
+    const esIng=nombre==='Cuotas administración';
+    const añoVal=esIng?g.añoIng:g.añoEgr, mesVal=esIng?g.mesIng:g.mesEgr;
+    const tipo=esIng?'ing':'egr', signo=esIng?'+':'-';
+    const icon=nombre==='West Point Security'?'🛡️':nombre==='Energía zonas comunes'?'⚡':nombre==='Cuotas administración'?'🏠':nombre==='Bonos conserje'?'👷':'📦';
+    html+=`<div class="concepto-card">
+      <div class="cc-top">
+        <div style="display:flex;align-items:center;gap:8px;flex:1"><span style="font-size:20px">${icon}</span><div class="cc-nombre">${nombre}</div></div>
+        <div><div class="cc-año ${tipo}">${signo}${fmt(añoVal)}</div><div style="font-size:10px;color:var(--gray);text-align:right;margin-top:2px">acum. año</div></div>
+      </div>
+      <div class="cc-mes-row">
+        <div><div class="cc-mes-lbl">${MESES[+mesKey.split('-')[1]-1]} (mes actual)</div><div class="cc-count">${g.countMes} movimiento(s) este mes</div></div>
+        <div class="cc-mes-val ${tipo}">${mesVal>0?signo:''}${fmt(mesVal)}</div>
+      </div>
+    </div>`;
+  }
+  document.getElementById('conceptos-content').innerHTML=html||'<div class="empty"><div class="empty-icon">📌</div><div class="empty-text">Sin datos</div></div>';
+}
+
+// ── RENDER RESUMEN ────────────────────────────
+function renderResumen() {
+  const all=allMovs(), byMes={};
+  MESES_KEY.forEach(k=>{byMes[k]={movs:[],ing:0,egr:0};});
+  for(const m of all){if(byMes[m.fecha]){byMes[m.fecha].movs.push(m);m.tipo==='ingreso'?byMes[m.fecha].ing+=m.monto:byMes[m.fecha].egr+=m.monto;}}
+  const now=getMesActual();
+  const meses=MESES_KEY.filter(k=>k<=now||byMes[k].movs.length>0);
+  let totIng=0,totEgr=0;
+  MESES_KEY.forEach(k=>{totIng+=byMes[k].ing;totEgr+=byMes[k].egr;});
+  const saldoDisponible = getSaldo();
+  let html=`<div class="tot-grid">
+    <div class="tot-card"><div class="tot-lbl">Ingresos 2026</div><div class="tot-val" style="color:var(--green)">${fmt(totIng)}</div></div>
+    <div class="tot-card"><div class="tot-lbl">Egresos 2026</div><div class="tot-val" style="color:var(--red)">${fmt(totEgr)}</div></div>
+  </div>
+  <div class="tot-card" style="margin-bottom:14px"><div class="tot-lbl">Saldo disponible (incluye saldo inicial $307.572)</div><div class="tot-val" style="color:${saldoDisponible>=0?'var(--green)':'var(--red)'}">${fmt(saldoDisponible)}</div></div>`;
+  const maxV=Math.max(...meses.map(k=>Math.max(byMes[k].ing,byMes[k].egr)),1);
+  html+=meses.reverse().map(k=>{
+    const d=byMes[k],bal=d.ing-d.egr,mi=+k.split('-')[1]-1;
+    const det=d.movs.map(m=>`<div class="drow"><span class="chip ${m.tipo==='ingreso'?'i':'e'}">${m.tipo==='ingreso'?'↑':'↓'}</span><div class="drow-desc">${m.descripcion}</div><div class="drow-amt ${m.tipo==='ingreso'?'i':'e'}">${fmt(m.monto)}</div></div>`).join('');
+    return `<div class="mes-card" onclick="toggleCard(this)">
+      <div class="mc-top"><div class="mc-nombre">${MESES[mi]}</div><div class="mc-bal ${bal>=0?'pos':'neg'}">${bal>=0?'+':''}${fmt(bal)}</div></div>
+      <div class="bars">
+        <div class="bar-wrap"><div class="bar-lbl">Ingresos</div><div class="bar-track"><div class="bar-fill i" style="width:${Math.round(d.ing/maxV*100)}%"></div></div><div class="bar-val">${fmt(d.ing)}</div></div>
+        <div class="bar-wrap"><div class="bar-lbl">Egresos</div><div class="bar-track"><div class="bar-fill e" style="width:${Math.round(d.egr/maxV*100)}%"></div></div><div class="bar-val">${fmt(d.egr)}</div></div>
+      </div>
+      <div class="mes-detail">${det||'<div style="color:var(--gray);font-size:13px;text-align:center;padding:8px">Sin movimientos</div>'}</div>
+    </div>`;
+  }).join('');
+  document.getElementById('resumen-content').innerHTML=html;
+}
+
+// ── RENDER HISTÓRICO ──────────────────────────
+function renderHistorico() {
+  document.getElementById('historico-content').innerHTML=[...HISTORICO_ANUAL].reverse().map(y=>{
+    const badge=y.balance>=0?`<span class="yb pos">+${fmt(y.balance)}</span>`:`<span class="yb neg">${fmt(y.balance)}</span>`;
+    return `<div class="year-card" onclick="toggleCard(this)">
+      <div class="yc-top"><div class="yc-label">${y.year}</div>${badge}</div>
+      <div class="ynums">
+        <div class="ynum"><div class="ynum-lbl">Ingresos</div><div class="ynum-val" style="color:var(--green)">${fmt(y.total_ingresos)}</div></div>
+        <div class="ynum"><div class="ynum-lbl">Egresos</div><div class="ynum-val" style="color:var(--red)">${fmt(y.total_egresos)}</div></div>
+      </div>
+      <div class="ydet"><div style="font-size:12px;color:var(--gray);text-align:center;padding:6px">Datos del libro de cuentas histórico.</div></div>
+    </div>`;
+  }).join('');
+}
+
+// ── NAV ───────────────────────────────────────
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('screen-'+name).classList.add('active');
+  ['home','conceptos','resumen','historico','config'].forEach((n,i)=>{ if(n===name) document.querySelectorAll('.tab')[i].classList.add('active'); });
+  if(name==='conceptos') renderConceptos();
+  if(name==='resumen') renderResumen();
+  if(name==='historico') renderHistorico();
+  if(name==='config') renderConfig();
+}
+function toggleCard(el){el.classList.toggle('open');}
+
+// ── MODALS ────────────────────────────────────
+function populateMesSelects() {
+  const now=getMesActual();
+  const opts=MESES_KEY.filter(k=>k<=now).reverse().map(k=>{const[y,m]=k.split('-');return`<option value="${k}">${MESES[+m-1]} ${y}</option>`;}).join('');
+  ['admin-mes','security-mes','manual-mes','edit-mes'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=opts;});
+}
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){
+  document.getElementById(id).classList.remove('open');
+  selectedCasa=null;
+  document.querySelectorAll('.casa-btn').forEach(b=>b.classList.remove('selected'));
+}
+function openQuick(type){
+  populateMesSelects();
+  if(type==='admin') openModal('modal-admin');
+  else if(type==='energia'){document.getElementById('energia-monto').value='';document.getElementById('energia-nota').value='';openModal('modal-energia');}
+  else openModal('modal-westpoint');
+}
+function openManual(tipo){
+  modalTipo=tipo; populateMesSelects();
+  document.getElementById('manual-title').innerHTML=tipo==='ingreso'?'Registrar ingreso <span>INGRESO</span>':'Registrar gasto <span>EGRESO</span>';
+  document.getElementById('manual-save-btn').className='btn-save '+tipo;
+  document.getElementById('manual-desc').value=''; document.getElementById('manual-monto').value='';
+  openModal('modal-manual');
+}
+function openEmail(){openModal('modal-email');}
+function selectCasa(n){
+  selectedCasa=n;
+  document.querySelectorAll('.casa-btn').forEach((b,i)=>b.classList.toggle('selected',i+1===n));
+  onAdminMesChange();
+}
+function onAdminMesChange(){
+  const key=document.getElementById('admin-mes').value;
+  document.getElementById('admin-monto').value=key>='2026-02'?1080000:960000;
+}
+
+// ── GUARDAR ───────────────────────────────────
+async function saveAdmin(){
+  if(!selectedCasa){showToast('⚠️ Selecciona una casa');return;}
+  const mes=document.getElementById('admin-mes').value;
+  const monto=parseFloat(document.getElementById('admin-monto').value);
+  if(!monto||monto<=0){showToast('⚠️ Ingresa un monto válido');return;}
+  await addMov({id:genId(),fecha:mes,descripcion:`Cuota administración - Casa ${selectedCasa}`,tipo:'ingreso',monto:Math.round(monto)});
+  closeModal('modal-admin'); showToast('✓ Ingreso registrado');
+}
+async function saveEgresoRapido(type){
+  let monto,desc,mes;
+  if(type==='energia'){
+    monto=parseFloat(document.getElementById('energia-monto').value);
+    if(!monto||monto<=0){showToast('⚠️ Ingresa el monto de la factura');return;}
+    const nota=document.getElementById('energia-nota').value.trim();
+    desc='Energía zonas comunes'+(nota?' — '+nota:''); mes=getMesActual();
+  } else {
+    monto=Math.round(parseFloat(document.getElementById('security-monto').value));
+    if(!monto||monto<=0){showToast('⚠️ Ingresa un monto válido');return;}
+    mes=document.getElementById('security-mes').value;
+    desc=`West Point Security — ${MESES[+mes.split('-')[1]-1]}`;
+  }
+  await addMov({id:genId(),fecha:mes,descripcion:desc,tipo:'egreso',monto});
+  closeModal(type==='energia'?'modal-energia':'modal-westpoint'); showToast('✓ Egreso registrado');
+}
+async function saveManual(){
+  const desc=document.getElementById('manual-desc').value.trim();
+  const monto=parseFloat(document.getElementById('manual-monto').value);
+  const mes=document.getElementById('manual-mes').value;
+  if(!desc){showToast('⚠️ Escribe una descripción');return;}
+  if(!monto||monto<=0){showToast('⚠️ Ingresa un monto válido');return;}
+  await addMov({id:genId(),fecha:mes,descripcion:desc,tipo:modalTipo,monto:Math.round(monto)});
+  closeModal('modal-manual'); showToast('✓ '+(modalTipo==='ingreso'?'Ingreso':'Gasto')+' registrado');
+}
+async function addMov(m){
+  movimientos.push(m);
+  await saveMovimientos();
+  refresh();
+  // Log al Sheets — solo agrega, nunca borra ni sobreescribe
+  logMovToSheets(m).catch(()=>{});
+}
+
+// ── EDITAR ────────────────────────────────────
+function openEdit(id){
+  const m=movimientos.find(x=>x.id===id); if(!m) return;
+  editingId=id; populateMesSelects();
+  document.getElementById('edit-desc').value=m.descripcion;
+  document.getElementById('edit-monto').value=m.monto;
+  document.getElementById('edit-mes').value=m.fecha;
+  document.getElementById('edit-save-btn').className='btn-save '+(m.tipo==='ingreso'?'ingreso':'egreso');
+  openModal('modal-editar');
+}
+async function saveEdit(){
+  const m=movimientos.find(x=>x.id===editingId); if(!m) return;
+  const desc=document.getElementById('edit-desc').value.trim();
+  const monto=parseFloat(document.getElementById('edit-monto').value);
+  const mes=document.getElementById('edit-mes').value;
+  if(!desc){showToast('⚠️ Escribe una descripción');return;}
+  if(!monto||monto<=0){showToast('⚠️ Ingresa un monto válido');return;}
+  // Guardar snapshot anterior para el log en Sheets
+  const movAntes = {...m};
+  m.descripcion=desc; m.monto=Math.round(monto); m.fecha=mes;
+  const movDespues = {...m};
+  await saveMovimientos(); closeModal('modal-editar'); editingId=null; refresh(); showToast('✓ Movimiento actualizado');
+  logEdicionToSheets(movAntes, movDespues).catch(()=>{});
+}
+
+// ── ELIMINAR ──────────────────────────────────
+function askDelete(id,desc){
+  pendingDeleteId=id;
+  document.getElementById('confirm-sub').textContent='"'+desc+'"';
+  document.getElementById('confirm-bg').classList.add('open');
+}
+function closeConfirm(){pendingDeleteId=null;document.getElementById('confirm-bg').classList.remove('open');}
+async function confirmDelete(){
+  // Capturar el movimiento ANTES de eliminarlo para el log
+  const movEliminado = movimientos.find(m=>m.id===pendingDeleteId);
+  movimientos=movimientos.filter(m=>m.id!==pendingDeleteId);
+  await saveMovimientos(); closeConfirm(); refresh(); showToast('Movimiento eliminado');
+  if(movEliminado) logEliminacionToSheets(movEliminado).catch(()=>{});
+}
+
+// ── BÚSQUEDA ──────────────────────────────────
+
+
+// ── REPORTE EMAIL ─────────────────────────────
+function buildReporte(periodo) {
+  const mesKey=getMesActual(), saldoActual=getSaldo();
+  const all=allMovs();
+  const movsFilt=periodo==='mes'?all.filter(m=>m.fecha===mesKey):all;
+  const titulo=periodo==='mes'?`Reporte ${getMesLabel(mesKey)}`:'Reporte Año 2026';
+  const totIng=movsFilt.reduce((s,m)=>m.tipo==='ingreso'?s+m.monto:s,0);
+  const totEgr=movsFilt.reduce((s,m)=>m.tipo==='egreso'?s+m.monto:s,0);
+  const bal=totIng-totEgr;
+  const byMes={};
+  for(const m of movsFilt){if(!byMes[m.fecha])byMes[m.fecha]=[];byMes[m.fecha].push(m);}
+  const now=new Date();
+  const fechaHoy=`${now.getDate()} de ${MESES[now.getMonth()]} de ${now.getFullYear()}`;
+
+  const filas=Object.keys(byMes).sort().map(k=>{
+    const label=getMesLabel(k);
+    return byMes[k].map((m,i)=>`
+      <tr>
+        ${i===0?`<td rowspan="${byMes[k].length}" style="padding:10px 16px;font-weight:700;color:#5C3D2E;font-size:13px;vertical-align:top;border-right:2px solid #F0EBE2;white-space:nowrap;font-family:Georgia,serif">${label}</td>`:''}
+        <td style="padding:8px 16px;font-size:13px;color:#1A1714;line-height:1.4;border-bottom:1px solid #F5F0E8">${m.descripcion}</td>
+        <td style="padding:8px 16px;text-align:right;font-size:13px;color:${m.tipo==='ingreso'?'#2D6A4F':'#B33A3A'};font-weight:700;white-space:nowrap;border-bottom:1px solid #F5F0E8">${m.tipo==='ingreso'?'+':'-'}${fmt(m.monto)}</td>
+      </tr>`).join('');
+  }).join('');
+
+  return `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Reporte Terrazas de Salónica</title>
+  <style>
+    body{font-family:Georgia,serif;background:#F5F0E8;margin:0;padding:24px;color:#1A1714}
+    .wrap{max-width:720px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 32px rgba(0,0,0,0.12)}
+    .hdr{background:#1A1714;color:#F5F0E8;padding:36px 40px}
+    .hdr-eyebrow{font-size:11px;letter-spacing:3px;text-transform:uppercase;color:#8A8278;margin-bottom:8px;font-family:Arial,sans-serif}
+    .hdr h1{font-size:30px;font-weight:700;margin:0 0 4px;letter-spacing:-0.5px}
+    .hdr-sub{font-size:14px;color:#8A8278}
+    .hdr-date{font-size:12px;color:#8A8278;margin-top:8px;font-family:Arial,sans-serif}
+    .sumgrid{display:grid;grid-template-columns:repeat(3,1fr)}
+    .sum{padding:20px 24px;border-right:1px solid #F5F0E8}
+    .sum:last-child{border:none}
+    .sum-lbl{font-size:10px;text-transform:uppercase;letter-spacing:0.8px;color:#8A8278;font-family:Arial,sans-serif;margin-bottom:6px}
+    .sum-val{font-size:24px;font-weight:700}
+    .saldo-bar{background:#1A1714;padding:16px 24px;display:flex;justify-content:space-between;align-items:center}
+    .saldo-bar-lbl{font-size:11px;color:#8A8278;text-transform:uppercase;letter-spacing:0.5px;font-family:Arial,sans-serif}
+    .saldo-bar-val{font-size:26px;font-weight:700;color:#E8B95A;font-family:Georgia,serif}
+    .sec-hdr{padding:16px 24px 12px;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#8A8278;border-bottom:1px solid #F5F0E8;font-family:Arial,sans-serif;font-weight:700}
+    table{width:100%;border-collapse:collapse}
+    thead th{background:#F5F0E8;padding:10px 16px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:#8A8278;font-family:Arial,sans-serif;font-weight:700}
+    .footer{background:#F5F0E8;padding:20px 24px;text-align:center;font-size:12px;color:#8A8278;border-top:1px solid #E8E0D4;font-family:Arial,sans-serif}
+    @media print{body{background:white;padding:0}.wrap{box-shadow:none;border-radius:0}}
+  </style>
+  </head><body>
+  <div class="wrap">
+    <div class="hdr">
+      <div class="hdr-eyebrow">Conjunto Residencial</div>
+      <h1>Terrazas de Salónica</h1>
+      <div class="hdr-sub">${titulo}</div>
+      <div class="hdr-date">Generado el ${fechaHoy}</div>
+    </div>
+    <div class="sumgrid">
+      <div class="sum"><div class="sum-lbl">Ingresos</div><div class="sum-val" style="color:#2D6A4F">${fmt(totIng)}</div></div>
+      <div class="sum"><div class="sum-lbl">Egresos</div><div class="sum-val" style="color:#B33A3A">${fmt(totEgr)}</div></div>
+      <div class="sum"><div class="sum-lbl">Balance neto período</div><div class="sum-val" style="color:${bal>=0?'#2D6A4F':'#B33A3A'}">${bal>=0?'+':''}${fmt(bal)}</div></div>
+    </div>
+    <div class="saldo-bar">
+      <div class="saldo-bar-lbl">Saldo disponible acumulado</div>
+      <div class="saldo-bar-val">${fmt(saldoActual)}</div>
+    </div>
+    <div class="sec-hdr">Detalle de movimientos</div>
+    <table>
+      <thead><tr><th>Mes</th><th>Descripción</th><th style="text-align:right">Monto</th></tr></thead>
+      <tbody>${filas}</tbody>
+    </table>
+    <div class="footer">Terrazas de Salónica &nbsp;·&nbsp; ${titulo} &nbsp;·&nbsp; ${fechaHoy}</div>
+  </div>
+  </body></html>`;
+}
+
+// Paso 1: el botón del modal solo pide confirmación
+function enviarReporte() {
+  const periodo = document.getElementById('email-periodo').value;
+  const mesKey = getMesActual();
+  const titulo = periodo === 'mes' ? `Solo ${getMesLabel(mesKey)}` : 'Todo el año 2026';
+  document.getElementById('confirm-email-sub').textContent =
+    `Se enviará el reporte de ${titulo} a los 3 destinatarios y se abrirá en pantalla.`;
+  closeModal('modal-email');
+  document.getElementById('confirm-email-bg').classList.add('open');
+}
+
+function closeEmailConfirm() {
+  document.getElementById('confirm-email-bg').classList.remove('open');
+}
+
+// Paso 2: confirmación → envío real
+async function confirmarEnvio() {
+  closeEmailConfirm();
+  const periodo = document.getElementById('email-periodo').value;
+  const reporteHTML = buildReporte(periodo);
+  const mesKey = getMesActual();
+  const titulo = periodo === 'mes' ? `Reporte ${getMesLabel(mesKey)}` : 'Reporte Año 2026';
+  const all = allMovs().filter(m => periodo === 'mes' ? m.fecha === mesKey : true);
+  const totIng = all.reduce((s,m) => m.tipo==='ingreso' ? s+m.monto : s, 0);
+  const totEgr = all.reduce((s,m) => m.tipo==='egreso' ? s+m.monto : s, 0);
+  const bal = totIng - totEgr;
+  const saldo = fmt(getSaldo());
+
+  // Siempre abrir en nueva pestaña
+  const win = window.open('', '_blank');
+  if (win) { win.document.write(reporteHTML); win.document.close(); }
+
+  const bodyText = `Hola,
+
+Reporte contable de Terrazas de Salónica — ${titulo}.
+
+Resumen:
+• Ingresos:         ${fmt(totIng)}
+• Egresos:          ${fmt(totEgr)}
+• Balance neto:     ${bal>=0?'+':''}${fmt(bal)}
+• Saldo disponible: ${saldo}
+
+El reporte con formato completo se abre desde la app.
+
+Saludos,
+Administración Terrazas de Salónica`;
+
+  showToast('⏳ Enviando correo...');
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 1000,
+        system: "Eres un asistente que envía correos usando Gmail MCP. Usa la herramienta gmail para enviar el correo. Responde solo 'ENVIADO' si fue exitoso o 'ERROR: motivo' si falló.",
+        messages: [{ role: "user", content: `Envía este correo:\n\nPara: ${EMAILS.join(', ')}\nAsunto: 🏢 Terrazas de Salónica — ${titulo}\n\n${bodyText}` }],
+        mcp_servers: [{ type: "url", url: "https://gmail.mcp.claude.com/mcp", name: "gmail" }]
+      })
+    });
+    const data = await res.json();
+    const txt = data.content?.filter(c=>c.type==='text').map(c=>c.text).join('') || '';
+    showToast(res.ok && txt.includes('ENVIADO') ? '✅ Reporte enviado y abierto' : '📄 Reporte abierto (revisar correo)');
+  } catch(e) {
+    showToast('📄 Reporte abierto — sin conexión de correo');
+  }
+}
+
+// ── BACKUP POR CORREO (solo a Diego) ──────────
+async function enviarBackupEmail() {
+  const now = new Date();
+  const fechaLabel = now.toLocaleDateString('es-CO', {day:'2-digit', month:'long', year:'numeric'});
+  const all = allMovs();
+  let saldo = SALDO_INICIAL;
+  const lineas = all.map(m => {
+    saldo += m.tipo==='ingreso' ? m.monto : -m.monto;
+    const debe  = m.tipo==='ingreso' ? fmt(m.monto).padStart(14) : ''.padStart(14);
+    const haber = m.tipo==='egreso'  ? fmt(m.monto).padStart(14) : ''.padStart(14);
+    return `${getMesLabel(m.fecha).padEnd(16)} | ${m.descripcion.slice(0,40).padEnd(40)} | ${debe} | ${haber} | ${fmt(saldo).padStart(14)}`;
+  }).join('\n');
+
+  const totIng = all.reduce((s,m)=>m.tipo==='ingreso'?s+m.monto:s, 0);
+  const totEgr = all.reduce((s,m)=>m.tipo==='egreso' ?s+m.monto:s, 0);
+
+  const cuerpo = `Backup automático — Terrazas de Salónica
+Fecha: ${fechaLabel}
+Registros: ${all.length} movimientos
+
+RESUMEN
+Saldo inicial 2026:  ${fmt(SALDO_INICIAL)}
+Total ingresos:      ${fmt(totIng)}
+Total egresos:       ${fmt(totEgr)}
+Saldo disponible:    ${fmt(getSaldo())}
+
+DETALLE COMPLETO
+${'─'.repeat(100)}
+${'Mes'.padEnd(16)} | ${'Concepto'.padEnd(40)} | ${'Debe'.padStart(14)} | ${'Haber'.padStart(14)} | ${'Saldo'.padStart(14)}
+${'─'.repeat(100)}
+${lineas}
+${'─'.repeat(100)}
+
+Este correo es un respaldo automático generado desde la app Terrazas de Salónica.`;
+
+  showToast('⏳ Enviando backup...');
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 1000,
+        system: "Eres un asistente que envía correos usando Gmail MCP. Usa la herramienta gmail para enviar el correo exactamente como se indica. Responde solo 'ENVIADO' si fue exitoso.",
+        messages: [{ role: "user", content: `Envía este correo:\n\nPara: ${BACKUP_EMAIL}\nAsunto: 📦 Backup Terrazas de Salónica — ${fechaLabel}\n\n${cuerpo}` }],
+        mcp_servers: [{ type: "url", url: "https://gmail.mcp.claude.com/mcp", name: "gmail" }]
+      })
+    });
+    const data = await res.json();
+    const txt = data.content?.filter(c=>c.type==='text').map(c=>c.text).join('') || '';
+    showToast(res.ok && txt.includes('ENVIADO') ? '✅ Backup enviado a tu correo' : '⚠️ No se pudo enviar el backup');
+  } catch(e) {
+    showToast('⚠️ Sin conexión — backup no enviado');
+  }
+}
+
+// ── TOAST ─────────────────────────────────────
+let toastTimer;
+function showToast(msg){
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.classList.add('show');
+  clearTimeout(toastTimer); toastTimer=setTimeout(()=>el.classList.remove('show'),2800);
+}
+
+// ── BACKDROPS ─────────────────────────────────
+document.querySelectorAll('.modal-bg').forEach(bg=>{
+  bg.addEventListener('click',e=>{
+    if(e.target===bg){bg.classList.remove('open');selectedCasa=null;document.querySelectorAll('.casa-btn').forEach(b=>b.classList.remove('selected'));}
+  });
+});
+
+// ── GOOGLE SHEETS SYNC ────────────────────────
+// URL del Google Apps Script — se configura una vez y se guarda
+let scriptUrl = '';
+
+async function loadScriptUrl() {
+  try { const r = await window.storage.get('terrazas_script_url'); if(r) scriptUrl = r.value; } catch(e){}
+}
+async function saveScriptUrl(url) {
+  try { await window.storage.set('terrazas_script_url', url); scriptUrl = url; } catch(e){}
+}
+
+// Registrar UN movimiento al Sheets como fila nueva (nunca borra)
+async function logMovToSheets(mov, nota) {
+  if (!scriptUrl) return;
+  const all = allMovs();
+  let saldoCorrido = SALDO_INICIAL;
+  for (const m of all) {
+    saldoCorrido += m.tipo === 'ingreso' ? m.monto : -m.monto;
+    if (m.id === mov.id) break;
+  }
+  const concepto = nota ? `[${nota}] ${mov.descripcion}` : mov.descripcion;
+  const payload = {
+    action: 'addMovimiento',
+    mes: getMesLabel(mov.fecha),
+    concepto,
+    debe: mov.tipo === 'ingreso' ? mov.monto : 0,
+    haber: mov.tipo === 'egreso' ? mov.monto : 0,
+    saldo: Math.round(saldoCorrido)
+  };
+  try {
+    await fetch(scriptUrl + '?' + new URLSearchParams(payload));
+  } catch(e) { console.warn('Sheets log failed:', e); }
+}
+
+// Log de corrección cuando se edita un movimiento
+async function logEdicionToSheets(movAntes, movDespues) {
+  if (!scriptUrl) return;
+  // Registrar anulación del movimiento anterior
+  await logMovToSheets(movAntes, '✏️ EDITADO - valor anterior');
+  // Registrar el nuevo valor
+  await logMovToSheets(movDespues, '✏️ EDITADO - valor nuevo');
+}
+
+// Log de eliminación
+async function logEliminacionToSheets(mov) {
+  if (!scriptUrl) return;
+  await logMovToSheets(mov, '🗑️ ELIMINADO');
+}
+
+// Botón manual: envía TODOS los movimientos al Sheets como log completo
+// Útil para el primer setup o si quieren una copia fresca
+async function syncAllToSheets() {
+  if (!scriptUrl) { showToast('⚠️ Configura primero la URL del script'); return; }
+  showToast('⏳ Enviando registros a Google Sheets...');
+  const all = allMovs();
+  let saldo = SALDO_INICIAL;
+  let ok = 0, fail = 0;
+  for (const m of all) {
+    saldo += m.tipo === 'ingreso' ? m.monto : -m.monto;
+    const payload = {
+      action: 'addMovimiento',
+      mes: getMesLabel(m.fecha),
+      concepto: m.descripcion,
+      debe: m.tipo === 'ingreso' ? m.monto : 0,
+      haber: m.tipo === 'egreso' ? m.monto : 0,
+      saldo: Math.round(saldo)
+    };
+    try {
+      await fetch(scriptUrl + '?' + new URLSearchParams(payload));
+      ok++;
+    } catch(e) { fail++; }
+  }
+  if (fail === 0) showToast(`✅ ${ok} registros enviados a Sheets`);
+  else showToast(`⚠️ ${ok} enviados, ${fail} fallaron — intenta de nuevo`);
+}
+
+// ── CONFIGURACIÓN SHEETS ──────────────────────
+function openSheetsConfig() {
+  showScreen('config'); // redirige a la pestaña de config
+}
+async function saveSheetsConfig() {
+  const url = document.getElementById('sheets-url-input').value.trim();
+  if (url && !url.startsWith('https://script.google.com')) {
+    showToast('⚠️ URL inválida — debe ser de script.google.com'); return;
+  }
+  await saveScriptUrl(url);
+  renderConfig(); // actualizar estado en pantalla
+  showToast(url ? '✅ URL guardada' : 'URL eliminada');
+}
+
+// ── RENDER CONFIG ─────────────────────────────
+function renderConfig() {
+  const input = document.getElementById('sheets-url-input');
+  const status = document.getElementById('config-url-status');
+  const syncSub = document.getElementById('sync-sub');
+  if (input) input.value = scriptUrl || '';
+  if (status) {
+    status.textContent = scriptUrl
+      ? '✅ Conectado — URL configurada correctamente'
+      : '⚠️ Sin URL — la sincronización con Sheets no está activa';
+    status.style.color = scriptUrl ? 'var(--green)' : 'var(--red)';
+  }
+  if (syncSub) {
+    syncSub.textContent = scriptUrl
+      ? 'Conectado · Solo agrega, nunca borra datos'
+      : 'Configura primero la URL del script arriba';
+  }
+}
+
+// ── INIT ──────────────────────────────────────
+function refresh(){
+  renderHeader(); renderHome();
+  const a=document.querySelector('.screen.active')?.id;
+  if(a==='screen-conceptos') renderConceptos();
+  if(a==='screen-resumen') renderResumen();
+  if(a==='screen-historico') renderHistorico();
+}
+async function init(){
+  await loadMovimientos();
+  await loadScriptUrl();
+  populateMesSelects();
+  refresh();
+  renderConfig();
+}
+init();
+</script>
+</body>
+</html>
