@@ -992,10 +992,22 @@ document.querySelectorAll('.modal-bg').forEach(bg=>{
 let scriptUrl = '';
 
 async function loadScriptUrl() {
-  try { const r = await window.storage.get('terrazas_script_url'); if(r) scriptUrl = r.value; } catch(e){}
+  try {
+    // Intentar window.storage primero
+    const r = await window.storage.get('terrazas_script_url');
+    if (r && r.value) { scriptUrl = r.value; return; }
+  } catch(e){}
+  // Fallback a localStorage
+  try {
+    const v = localStorage.getItem('terrazas_script_url');
+    if (v) scriptUrl = v;
+  } catch(e){}
 }
 async function saveScriptUrl(url) {
-  try { await window.storage.set('terrazas_script_url', url); scriptUrl = url; } catch(e){}
+  scriptUrl = url; // actualizar en memoria inmediatamente
+  // Guardar en ambos para máxima compatibilidad
+  try { await window.storage.set('terrazas_script_url', url); } catch(e){}
+  try { localStorage.setItem('terrazas_script_url', url); } catch(e){}
 }
 
 // Registrar UN movimiento al Sheets como fila nueva (nunca borra)
