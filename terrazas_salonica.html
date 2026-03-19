@@ -187,7 +187,7 @@
         <div class="header-title">Terrazas de Salónica</div>
         <div class="header-sub">Administración · Cuentas</div>
       </div>
-      <div class="version-badge">v1.1</div>
+      <div class="version-badge">v1.2</div>
     </div>
     <div class="saldo-strip">
       <div>
@@ -1085,31 +1085,38 @@ async function logEliminacionToSheets(mov) {
   await logMovToSheets(mov, '🗑️ ELIMINADO');
 }
 
-// Botón manual: envía TODOS los movimientos al Sheets como log completo
-// Útil para el primer setup o si quieren una copia fresca
+// ── Cargar movimientos desde el Sheet ──────────
+async function loadFromSheets() {
+  if (!scriptUrl) return;
+  try {
+    const res = await fetch(scriptUrl + '?action=getAll', { redirect: 'follow' });
+    const text = await res.text();
+    const data = JSON.parse(text);
+    if (data.ok) {
+      movimientos = data.movimientos || [];
+      if (data.saldoInicial) SALDO_INICIAL = data.saldoInicial;
+      sheetsLoaded = true;
+      refresh();
+      renderConfig();
+    } else {
+      console.warn('getAll error:', data.error);
+    }
+  } catch(e) {
+    console.warn('loadFromSheets failed:', e.message);
+  }
+}
+
+// Botón manual en ⚙️ Config — recarga desde el Sheet
 async function syncAllToSheets() {
   if (!scriptUrl) { showToast('⚠️ Configura primero la URL del script'); return; }
-  showToast('⏳ Enviando registros a Google Sheets...');
-  const all = allMovs();
-  let saldo = SALDO_INICIAL;
-  let ok = 0, fail = 0;
-  for (const m of all) {
-    saldo += m.tipo === 'ingreso' ? m.monto : -m.monto;
-    const payload = {
-      action: 'addMovimiento',
-      mes: getMesLabel(m.fecha),
-      concepto: m.descripcion,
-      debe: m.tipo === 'ingreso' ? m.monto : 0,
-      haber: m.tipo === 'egreso' ? m.monto : 0,
-      saldo: Math.round(saldo)
-    };
-    try {
-      await fetch(scriptUrl + '?' + new URLSearchParams(payload));
-      ok++;
-    } catch(e) { fail++; }
-  }
-  if (fail === 0) showToast(`✅ ${ok} registros enviados a Sheets`);
-  else showToast(`⚠️ ${ok} enviados, ${fail} fallaron — intenta de nuevo`);
+  showToast('⏳ Cargando desde Google Sheets...');
+  await loadFromSheets();
+  if (sheetsLoaded && movimientos.length > 0)
+    showToast(`✅ ${movimientos.length} registros cargados`);
+  else if (sheetsLoaded)
+    showToast('⚠️ El Sheet no tiene datos todavía');
+  else
+    showToast('⚠️ No se pudo conectar al Sheet');
 }
 
 // ── CONFIGURACIÓN SHEETS ──────────────────────
