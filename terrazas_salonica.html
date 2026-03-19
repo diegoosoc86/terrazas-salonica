@@ -444,24 +444,9 @@
 // ── DATA ──────────────────────────────────────
 const EMAILS = ['hedacas@hotmail.com','blancachechi@hotmail.com','diegoosoc@gmail.com'];
 const BACKUP_EMAIL = 'diegoosoc@gmail.com';
-const SALDO_INICIAL = 307572;
+let SALDO_INICIAL = 307572; // se actualiza al leer el Sheet
 const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 const MESES_KEY = ['2026-01','2026-02','2026-03','2026-04','2026-05','2026-06','2026-07','2026-08','2026-09','2026-10','2026-11','2026-12'];
-
-const MOVS_EXCEL = [
-  {id:'e1',fecha:'2026-01',descripcion:'Cuota Enero - Casa 1',tipo:'ingreso',monto:960000,fuente:'excel'},
-  {id:'e2',fecha:'2026-01',descripcion:'Cuota Enero - Casas 2 y 3',tipo:'ingreso',monto:1920000,fuente:'excel'},
-  {id:'e3',fecha:'2026-01',descripcion:'Cuota Enero - Casa 4',tipo:'ingreso',monto:960000,fuente:'excel'},
-  {id:'e4',fecha:'2026-01',descripcion:'Energía zonas comunes',tipo:'egreso',monto:269150,fuente:'excel'},
-  {id:'e5',fecha:'2026-01',descripcion:'Conserjería West Point Security — Enero',tipo:'egreso',monto:3711000,fuente:'excel'},
-  {id:'e6',fecha:'2026-01',descripcion:'Bono conserje por apoyos fuera de jornada',tipo:'egreso',monto:220000,fuente:'excel'},
-  {id:'e7',fecha:'2026-02',descripcion:'Cuota Febrero - Casa 1',tipo:'ingreso',monto:1080000,fuente:'excel'},
-  {id:'e8',fecha:'2026-02',descripcion:'Cuota Febrero - Casas 2, 3 y 4',tipo:'ingreso',monto:3240000,fuente:'excel'},
-  {id:'e9',fecha:'2026-02',descripcion:'Conserjería West Point Security — Febrero',tipo:'egreso',monto:3422248,fuente:'excel'},
-  {id:'e10',fecha:'2026-02',descripcion:'Energía zonas comunes — Factura 03-03-2026',tipo:'egreso',monto:269150,fuente:'excel'},
-  {id:'e11',fecha:'2026-02',descripcion:'Bono conserje por apoyos fuera de jornada',tipo:'egreso',monto:450000,fuente:'excel'},
-  {id:'e12',fecha:'2026-03',descripcion:'Cuota Marzo - Casa 2',tipo:'ingreso',monto:1080000,fuente:'excel'},
-];
 
 const HISTORICO_ANUAL = [
   {year:2005,total_ingresos:3863185,total_egresos:4163710,balance:-300525},
@@ -488,29 +473,24 @@ const HISTORICO_ANUAL = [
 ];
 
 // ── STATE ─────────────────────────────────────
-let movimientos = [];
+let movimientos = [];      // todos los movimientos cargados del Sheet
+let sheetsLoaded = false;  // true cuando se leyó el Sheet al menos una vez
 let selectedCasa = null;
 let modalTipo = 'ingreso';
 let pendingDeleteId = null;
 let editingId = null;
 
-// ── STORAGE ───────────────────────────────────
+// ── STORAGE — ya no guardamos movimientos localmente ──────
+// El Sheet es la fuente de verdad. Solo guardamos la URL del script.
 async function loadMovimientos() {
-  try {
-    // Intentar clave actual
-    const r = await window.storage.get('terrazas_movs_v2');
-    if (r) { movimientos = JSON.parse(r.value); return; }
-    // Migrar desde clave antigua si existe
-    const old = await window.storage.get('terrazas_movs');
-    if (old) { movimientos = JSON.parse(old.value); await saveMovimientos(); }
-  } catch(e){ movimientos=[]; }
+  // No-op: los movimientos vienen del Sheet via loadFromSheets()
 }
 async function saveMovimientos() {
-  try { await window.storage.set('terrazas_movs_v2', JSON.stringify(movimientos)); } catch(e){}
+  // No-op: las operaciones van directo al Sheet
 }
 
 // ── HELPERS ───────────────────────────────────
-function allMovs() { return [...MOVS_EXCEL,...movimientos].sort((a,b)=>a.fecha.localeCompare(b.fecha)); }
+function allMovs() { return [...movimientos].sort((a,b)=>a.fecha.localeCompare(b.fecha)); }
 function getSaldo() { return Math.round(allMovs().reduce((s,m)=>m.tipo==='ingreso'?s+m.monto:s-m.monto, SALDO_INICIAL)); }
 function getMesActual() { const n=new Date(); return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}`; }
 function getMesLabel(k) { const [y,m]=k.split('-'); return MESES[+m-1]+' '+y; }
@@ -543,7 +523,14 @@ function renderHeader() {
 function renderHome() {
   const list=document.getElementById('mov-list');
   const rec=[...allMovs()].reverse().slice(0,30);
-  if(!rec.length){list.innerHTML='<div class="empty"><div class="empty-icon">📋</div><div class="empty-text">Sin movimientos aún</div></div>';return;}
+  if(!rec.length){
+    list.innerHTML = scriptUrl && !sheetsLoaded
+      ? '<div class="empty"><div class="empty-icon">⏳</div><div class="empty-text">Cargando datos del Sheet...</div></div>'
+      : !scriptUrl
+      ? '<div class="empty"><div class="empty-icon">⚙️</div><div class="empty-text">Ve a ⚙️ Config y configura la URL del script para empezar</div></div>'
+      : '<div class="empty"><div class="empty-icon">📋</div><div class="empty-text">Sin movimientos aún</div></div>';
+    return;
+  }
   list.innerHTML=rec.map(m=>{
     const canEdit=!m.fuente;
     const acts=canEdit?`<div class="mov-actions">
@@ -723,11 +710,33 @@ async function saveManual(){
   closeModal('modal-manual'); showToast('✓ '+(modalTipo==='ingreso'?'Ingreso':'Gasto')+' registrado');
 }
 async function addMov(m){
-  movimientos.push(m);
-  await saveMovimientos();
-  refresh();
-  // Log al Sheets — solo agrega, nunca borra ni sobreescribe
-  logMovToSheets(m).catch(()=>{});
+  if (!scriptUrl) { showToast('⚠️ Configura la URL del script en ⚙️ Config'); return; }
+  // Calcular saldo hasta este movimiento
+  const saldoCorrido = Math.round(
+    [...movimientos, m].sort((a,b)=>a.fecha.localeCompare(b.fecha))
+    .reduce((s,x)=>x.tipo==='ingreso'?s+x.monto:s-x.monto, SALDO_INICIAL)
+  );
+  const payload = {
+    action: 'addMovimiento',
+    id: m.id, fecha: m.fecha, mes: getMesLabel(m.fecha),
+    concepto: m.descripcion,
+    debe:  m.tipo==='ingreso' ? m.monto : 0,
+    haber: m.tipo==='egreso'  ? m.monto : 0,
+    saldo: saldoCorrido
+  };
+  showToast('⏳ Guardando...');
+  try {
+    const res = await fetch(scriptUrl + '?' + new URLSearchParams(payload));
+    const data = await res.json();
+    if (data.ok) {
+      await loadFromSheets(); // refrescar desde el Sheet
+      showToast('✓ Registrado');
+    } else {
+      showToast('⚠️ Error: ' + (data.error || 'desconocido'));
+    }
+  } catch(e) {
+    showToast('⚠️ Sin conexión al Sheet');
+  }
 }
 
 // ── EDITAR ────────────────────────────────────
@@ -747,12 +756,28 @@ async function saveEdit(){
   const mes=document.getElementById('edit-mes').value;
   if(!desc){showToast('⚠️ Escribe una descripción');return;}
   if(!monto||monto<=0){showToast('⚠️ Ingresa un monto válido');return;}
-  // Guardar snapshot anterior para el log en Sheets
-  const movAntes = {...m};
-  m.descripcion=desc; m.monto=Math.round(monto); m.fecha=mes;
-  const movDespues = {...m};
-  await saveMovimientos(); closeModal('modal-editar'); editingId=null; refresh(); showToast('✓ Movimiento actualizado');
-  logEdicionToSheets(movAntes, movDespues).catch(()=>{});
+  if(!scriptUrl){showToast('⚠️ Configura la URL del script en ⚙️ Config');return;}
+  const payload = {
+    action: 'editMovimiento',
+    id: editingId, fecha: mes, mes: getMesLabel(mes),
+    concepto: desc,
+    debe:  m.tipo==='ingreso' ? Math.round(monto) : 0,
+    haber: m.tipo==='egreso'  ? Math.round(monto) : 0,
+  };
+  showToast('⏳ Guardando...');
+  try {
+    const res = await fetch(scriptUrl + '?' + new URLSearchParams(payload));
+    const data = await res.json();
+    if (data.ok) {
+      closeModal('modal-editar'); editingId=null;
+      await loadFromSheets();
+      showToast('✓ Movimiento actualizado');
+    } else {
+      showToast('⚠️ Error: ' + (data.error || 'desconocido'));
+    }
+  } catch(e) {
+    showToast('⚠️ Sin conexión al Sheet');
+  }
 }
 
 // ── ELIMINAR ──────────────────────────────────
@@ -763,11 +788,23 @@ function askDelete(id,desc){
 }
 function closeConfirm(){pendingDeleteId=null;document.getElementById('confirm-bg').classList.remove('open');}
 async function confirmDelete(){
-  // Capturar el movimiento ANTES de eliminarlo para el log
-  const movEliminado = movimientos.find(m=>m.id===pendingDeleteId);
-  movimientos=movimientos.filter(m=>m.id!==pendingDeleteId);
-  await saveMovimientos(); closeConfirm(); refresh(); showToast('Movimiento eliminado');
-  if(movEliminado) logEliminacionToSheets(movEliminado).catch(()=>{});
+  if(!scriptUrl){showToast('⚠️ Configura la URL del script en ⚙️ Config');closeConfirm();return;}
+  showToast('⏳ Eliminando...');
+  try {
+    const res = await fetch(scriptUrl + '?action=deleteMovimiento&id=' + encodeURIComponent(pendingDeleteId));
+    const data = await res.json();
+    if (data.ok) {
+      closeConfirm();
+      await loadFromSheets();
+      showToast('Movimiento eliminado');
+    } else {
+      closeConfirm();
+      showToast('⚠️ Error: ' + (data.error || 'desconocido'));
+    }
+  } catch(e) {
+    closeConfirm();
+    showToast('⚠️ Sin conexión al Sheet');
+  }
 }
 
 // ── BÚSQUEDA ──────────────────────────────────
@@ -1096,14 +1133,20 @@ function renderConfig() {
   const syncSub = document.getElementById('sync-sub');
   if (input) input.value = scriptUrl || '';
   if (status) {
-    status.textContent = scriptUrl
-      ? '✅ Conectado — URL configurada correctamente'
-      : '⚠️ Sin URL — la sincronización con Sheets no está activa';
-    status.style.color = scriptUrl ? 'var(--green)' : 'var(--red)';
+    if (scriptUrl && sheetsLoaded) {
+      status.textContent = `✅ Conectado — ${movimientos.length} registros cargados`;
+      status.style.color = 'var(--green)';
+    } else if (scriptUrl && !sheetsLoaded) {
+      status.textContent = '⏳ URL guardada — aún no se han cargado datos';
+      status.style.color = 'var(--gold)';
+    } else {
+      status.textContent = '⚠️ Sin URL — configura el script para activar el Sheet';
+      status.style.color = 'var(--red)';
+    }
   }
   if (syncSub) {
     syncSub.textContent = scriptUrl
-      ? 'Conectado · Solo agrega, nunca borra datos'
+      ? 'Recarga los datos si hiciste cambios directo en el Sheet'
       : 'Configura primero la URL del script arriba';
   }
 }
