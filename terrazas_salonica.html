@@ -187,7 +187,7 @@
         <div class="header-title">Terrazas de Salónica</div>
         <div class="header-sub">Administración · Cuentas</div>
       </div>
-      <div class="version-badge">v1.2</div>
+      <div class="version-badge">v1.3</div>
     </div>
     <div class="saldo-strip">
       <div>
@@ -501,6 +501,21 @@ function fmt(n) {
   const s = abs.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
   return (rounded < 0 ? '-' : '') + '$' + s;
 }
+// Parsear input con formato COP (puntos de miles) → número
+function parseCOP(val) {
+  if (!val) return 0;
+  return parseFloat(String(val).replace(/[^0-9]/g, '')) || 0;
+}
+// Formatear input mientras se escribe — separadores de miles COP
+function formatMontoInput(inputId) {
+  const el = document.getElementById(inputId);
+  if (!el) return;
+  const raw = el.value.replace(/[^0-9]/g, '');
+  if (!raw) { el.value = ''; return; }
+  const num = parseInt(raw, 10);
+  const formatted = num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  el.value = formatted;
+}
 function genId() { return 'u'+Date.now()+Math.random().toString(36).slice(2,5); }
 
 function getConcepto(m) {
@@ -672,14 +687,15 @@ function selectCasa(n){
 }
 function onAdminMesChange(){
   const key=document.getElementById('admin-mes').value;
-  document.getElementById('admin-monto').value=key>='2026-02'?1080000:960000;
+  const val = key>='2026-02' ? 1080000 : 960000;
+  document.getElementById('admin-monto').value = val.toString().replace(/\B(?=(\d{3})+(?!\d))/g,'.');
 }
 
 // ── GUARDAR ───────────────────────────────────
 async function saveAdmin(){
   if(!selectedCasa){showToast('⚠️ Selecciona una casa');return;}
   const mes=document.getElementById('admin-mes').value;
-  const monto=parseFloat(document.getElementById('admin-monto').value);
+  const monto=parseCOP(document.getElementById('admin-monto').value);
   if(!monto||monto<=0){showToast('⚠️ Ingresa un monto válido');return;}
   await addMov({id:genId(),fecha:mes,descripcion:`Cuota administración - Casa ${selectedCasa}`,tipo:'ingreso',monto:Math.round(monto)});
   closeModal('modal-admin'); showToast('✓ Ingreso registrado');
@@ -687,12 +703,12 @@ async function saveAdmin(){
 async function saveEgresoRapido(type){
   let monto,desc,mes;
   if(type==='energia'){
-    monto=parseFloat(document.getElementById('energia-monto').value);
+    monto=parseCOP(document.getElementById('energia-monto').value);
     if(!monto||monto<=0){showToast('⚠️ Ingresa el monto de la factura');return;}
     const nota=document.getElementById('energia-nota').value.trim();
     desc='Energía zonas comunes'+(nota?' — '+nota:''); mes=getMesActual();
   } else {
-    monto=Math.round(parseFloat(document.getElementById('security-monto').value));
+    monto=parseCOP(document.getElementById('security-monto').value);
     if(!monto||monto<=0){showToast('⚠️ Ingresa un monto válido');return;}
     mes=document.getElementById('security-mes').value;
     desc=`West Point Security — ${MESES[+mes.split('-')[1]-1]}`;
@@ -702,7 +718,7 @@ async function saveEgresoRapido(type){
 }
 async function saveManual(){
   const desc=document.getElementById('manual-desc').value.trim();
-  const monto=parseFloat(document.getElementById('manual-monto').value);
+  const monto=parseCOP(document.getElementById('manual-monto').value);
   const mes=document.getElementById('manual-mes').value;
   if(!desc){showToast('⚠️ Escribe una descripción');return;}
   if(!monto||monto<=0){showToast('⚠️ Ingresa un monto válido');return;}
@@ -752,7 +768,7 @@ function openEdit(id){
 async function saveEdit(){
   const m=movimientos.find(x=>x.id===editingId); if(!m) return;
   const desc=document.getElementById('edit-desc').value.trim();
-  const monto=parseFloat(document.getElementById('edit-monto').value);
+  const monto=parseCOP(document.getElementById('edit-monto').value);
   const mes=document.getElementById('edit-mes').value;
   if(!desc){showToast('⚠️ Escribe una descripción');return;}
   if(!monto||monto<=0){showToast('⚠️ Ingresa un monto válido');return;}
