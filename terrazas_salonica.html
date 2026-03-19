@@ -190,7 +190,7 @@
         <div class="header-title">Terrazas de Salónica</div>
         <div class="header-sub">Administración · Cuentas</div>
       </div>
-      <div class="version-badge">v1.7</div>
+      <div class="version-badge">v1.8</div>
     </div>
     <div class="saldo-strip">
       <div>
@@ -341,7 +341,7 @@
 <div class="modal-bg" id="modal-energia">
   <div class="modal">
     <div class="modal-title">Energía zonas comunes <span>EGRESO</span></div>
-    <div class="field"><label>Monto factura</label><input type="number" id="energia-monto" placeholder="Ej: 320000"></div>
+    <div class="field"><label>Monto factura</label><input type="text" id="energia-monto" placeholder="Ej: 320.000" inputmode="numeric" oninput="formatMontoInput('energia-monto')"></div>
     <div class="field"><label>Nota (opcional)</label><input type="text" id="energia-nota" placeholder="Ej: Factura vencimiento 3-abril"></div>
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeModal('modal-energia')">Cancelar</button>
@@ -354,7 +354,7 @@
 <div class="modal-bg" id="modal-westpoint">
   <div class="modal">
     <div class="modal-title">West Point Security <span>EGRESO</span></div>
-    <div class="field"><label>Monto mensualidad</label><input type="number" id="security-monto" value="3434861"></div>
+    <div class="field"><label>Monto mensualidad</label><input type="text" id="security-monto" value="3.434.861" inputmode="numeric" oninput="formatMontoInput('security-monto')"></div>
     <div class="field"><label>Mes del servicio</label><select id="security-mes"></select></div>
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeModal('modal-westpoint')">Cancelar</button>
@@ -368,7 +368,7 @@
   <div class="modal">
     <div class="modal-title" id="manual-title">Registrar movimiento</div>
     <div class="field"><label>Descripción</label><input type="text" id="manual-desc" placeholder="Describe el movimiento..."></div>
-    <div class="field"><label>Monto ($)</label><input type="number" id="manual-monto" placeholder="0"></div>
+    <div class="field"><label>Monto ($)</label><input type="text" id="manual-monto" placeholder="0" inputmode="numeric" oninput="formatMontoInput('manual-monto')"></div>
     <div class="field"><label>Mes</label><select id="manual-mes"></select></div>
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeModal('modal-manual')">Cancelar</button>
