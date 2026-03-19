@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <title>Terrazas de Salónica</title>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,600;0,700;1,300&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
   <style>
@@ -187,7 +190,7 @@
         <div class="header-title">Terrazas de Salónica</div>
         <div class="header-sub">Administración · Cuentas</div>
       </div>
-      <div class="version-badge">v1.6</div>
+      <div class="version-badge">v1.7</div>
     </div>
     <div class="saldo-strip">
       <div>
@@ -1214,11 +1217,14 @@ function refresh(){
   if(a==='screen-historico') renderHistorico();
 }
 async function init(){
-  await loadMovimientos();
   await loadScriptUrl();
   populateMesSelects();
-  refresh();
+  refresh();       // render inmediato con datos vacíos
   renderConfig();
+  // Si hay URL configurada, cargar datos del Sheet automáticamente
+  if (scriptUrl) {
+    await loadFromSheets();
+  }
 }
 init();
 </script>
