@@ -187,7 +187,7 @@
         <div class="header-title">Terrazas de Salónica</div>
         <div class="header-sub">Administración · Cuentas</div>
       </div>
-      <div class="version-badge">v1.3</div>
+      <div class="version-badge">v1.6</div>
     </div>
     <div class="saldo-strip">
       <div>
@@ -326,7 +326,7 @@
       </div>
     </div>
     <div class="field"><label>Mes que paga</label><select id="admin-mes" onchange="onAdminMesChange()"></select></div>
-    <div class="field"><label>Monto</label><input type="number" id="admin-monto" value="1080000"></div>
+    <div class="field"><label>Monto</label><input type="text" id="admin-monto" value="1.080.000" inputmode="numeric" oninput="formatMontoInput('admin-monto')"></div>
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeModal('modal-admin')">Cancelar</button>
       <button class="btn-save ingreso" onclick="saveAdmin()">✓ Registrar</button>
@@ -379,7 +379,7 @@
   <div class="modal">
     <div class="modal-title">Editar movimiento</div>
     <div class="field"><label>Descripción</label><input type="text" id="edit-desc"></div>
-    <div class="field"><label>Monto ($)</label><input type="number" id="edit-monto"></div>
+    <div class="field"><label>Monto ($)</label><input type="text" id="edit-monto" inputmode="numeric" oninput="formatMontoInput('edit-monto')"></div>
     <div class="field"><label>Mes</label><select id="edit-mes"></select></div>
     <div class="modal-actions">
       <button class="btn-cancel" onclick="closeModal('modal-editar')">Cancelar</button>
@@ -656,9 +656,21 @@ function toggleCard(el){el.classList.toggle('open');}
 
 // ── MODALS ────────────────────────────────────
 function populateMesSelects() {
-  const now=getMesActual();
-  const opts=MESES_KEY.filter(k=>k<=now).reverse().map(k=>{const[y,m]=k.split('-');return`<option value="${k}">${MESES[+m-1]} ${y}</option>`;}).join('');
-  ['admin-mes','security-mes','manual-mes','edit-mes'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=opts;});
+  populateMesSelectsWithMin(null);
+}
+function populateMesSelectsWithMin(minMes) {
+  const now = getMesActual();
+  let keys = MESES_KEY.filter(k => k <= now);
+  // Si el movimiento es de un mes anterior no cubierto, incluirlo
+  if (minMes && !keys.includes(minMes)) keys.push(minMes);
+  keys.sort().reverse();
+  const opts = keys.map(k => {
+    const [y,m] = k.split('-');
+    return `<option value="${k}">${MESES[+m-1]} ${y}</option>`;
+  }).join('');
+  ['admin-mes','security-mes','manual-mes','edit-mes'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.innerHTML=opts;
+  });
 }
 function openModal(id){document.getElementById(id).classList.add('open');}
 function closeModal(id){
@@ -668,7 +680,14 @@ function closeModal(id){
 }
 function openQuick(type){
   populateMesSelects();
-  if(type==='admin') openModal('modal-admin');
+  if(type==='admin'){
+    // Pre-cargar monto según mes actual
+    onAdminMesChange();
+    // Resetear selección de casa
+    selectedCasa=null;
+    document.querySelectorAll('.casa-btn').forEach(b=>b.classList.remove('selected'));
+    openModal('modal-admin');
+  }
   else if(type==='energia'){document.getElementById('energia-monto').value='';document.getElementById('energia-nota').value='';openModal('modal-energia');}
   else openModal('modal-westpoint');
 }
@@ -683,7 +702,12 @@ function openEmail(){openModal('modal-email');}
 function selectCasa(n){
   selectedCasa=n;
   document.querySelectorAll('.casa-btn').forEach((b,i)=>b.classList.toggle('selected',i+1===n));
-  onAdminMesChange();
+  // Solo actualizar monto si el campo está vacío o tiene el valor por defecto
+  const el = document.getElementById('admin-monto');
+  const current = parseCOP(el.value);
+  if (!current || current === 960000 || current === 1080000) {
+    onAdminMesChange();
+  }
 }
 function onAdminMesChange(){
   const key=document.getElementById('admin-mes').value;
@@ -758,10 +782,16 @@ async function addMov(m){
 // ── EDITAR ────────────────────────────────────
 function openEdit(id){
   const m=movimientos.find(x=>x.id===id); if(!m) return;
-  editingId=id; populateMesSelects();
+  editingId=id;
+  // Poblar meses incluyendo el del movimiento aunque sea pasado
+  populateMesSelectsWithMin(m.fecha);
+  // Descripcion
   document.getElementById('edit-desc').value=m.descripcion;
-  document.getElementById('edit-monto').value=m.monto;
-  document.getElementById('edit-mes').value=m.fecha;
+  // Monto con formato COP (puntos de miles)
+  const montoNum = Math.round(parseFloat(String(m.monto).replace(/[^0-9]/g,''))||0);
+  document.getElementById('edit-monto').value = montoNum.toString().replace(/\B(?=(\d{3})+(?!\d))/g,'.');
+  // Mes — asignar despues de poblar el select con un tick
+  setTimeout(()=>{ document.getElementById('edit-mes').value=m.fecha; },0);
   document.getElementById('edit-save-btn').className='btn-save '+(m.tipo==='ingreso'?'ingreso':'egreso');
   openModal('modal-editar');
 }
@@ -772,6 +802,7 @@ async function saveEdit(){
   const mes=document.getElementById('edit-mes').value;
   if(!desc){showToast('⚠️ Escribe una descripción');return;}
   if(!monto||monto<=0){showToast('⚠️ Ingresa un monto válido');return;}
+  if(!mes||mes==='undefined'||mes===''){showToast('⚠️ Selecciona el mes');return;}
   if(!scriptUrl){showToast('⚠️ Configura la URL del script en ⚙️ Config');return;}
   const payload = {
     action: 'editMovimiento',
