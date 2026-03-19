@@ -190,7 +190,7 @@
         <div class="header-title">Terrazas de Salónica</div>
         <div class="header-sub">Administración · Cuentas</div>
       </div>
-      <div class="version-badge">v1.8</div>
+      <div class="version-badge">v2.0</div>
     </div>
     <div class="saldo-strip">
       <div>
@@ -953,109 +953,64 @@ function closeEmailConfirm() {
 // Paso 2: confirmación → envío real
 async function confirmarEnvio() {
   closeEmailConfirm();
-  const periodo = document.getElementById('email-periodo').value;
-  const reporteHTML = buildReporte(periodo);
-  const mesKey = getMesActual();
-  const titulo = periodo === 'mes' ? `Reporte ${getMesLabel(mesKey)}` : 'Reporte Año 2026';
-  const all = allMovs().filter(m => periodo === 'mes' ? m.fecha === mesKey : true);
-  const totIng = all.reduce((s,m) => m.tipo==='ingreso' ? s+m.monto : s, 0);
-  const totEgr = all.reduce((s,m) => m.tipo==='egreso' ? s+m.monto : s, 0);
-  const bal = totIng - totEgr;
-  const saldo = fmt(getSaldo());
+  if (!scriptUrl) { showToast('⚠️ Configura la URL del script en ⚙️ Config'); return; }
 
-  // Siempre abrir en nueva pestaña
+  const periodo = document.getElementById('email-periodo').value;
+  const mesKey  = getMesActual();
+  const titulo  = periodo === 'mes' ? `Reporte ${getMesLabel(mesKey)}` : 'Reporte Año 2026';
+  const all     = allMovs().filter(m => periodo === 'mes' ? m.fecha === mesKey : true);
+  const totIng  = all.reduce((s,m) => m.tipo==='ingreso' ? s+m.monto : s, 0);
+  const totEgr  = all.reduce((s,m) => m.tipo==='egreso'  ? s+m.monto : s, 0);
+  const bal     = totIng - totEgr;
+
+  // Abrir reporte HTML en nueva pestaña siempre
+  const reporteHTML = buildReporte(periodo);
   const win = window.open('', '_blank');
   if (win) { win.document.write(reporteHTML); win.document.close(); }
 
-  const bodyText = `Hola,
-
-Reporte contable de Terrazas de Salónica — ${titulo}.
-
-Resumen:
-• Ingresos:         ${fmt(totIng)}
-• Egresos:          ${fmt(totEgr)}
-• Balance neto:     ${bal>=0?'+':''}${fmt(bal)}
-• Saldo disponible: ${saldo}
-
-El reporte con formato completo se abre desde la app.
-
-Saludos,
-Administración Terrazas de Salónica`;
-
-  showToast('⏳ Enviando correo...');
+  // Enviar correo via Apps Script (usa MailApp de Google, funciona desde cualquier navegador)
+  showToast('⏳ Enviando reporte...');
   try {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 1000,
-        system: "Eres un asistente que envía correos usando Gmail MCP. Usa la herramienta gmail para enviar el correo. Responde solo 'ENVIADO' si fue exitoso o 'ERROR: motivo' si falló.",
-        messages: [{ role: "user", content: `Envía este correo:\n\nPara: ${EMAILS.join(', ')}\nAsunto: 🏢 Terrazas de Salónica — ${titulo}\n\n${bodyText}` }],
-        mcp_servers: [{ type: "url", url: "https://gmail.mcp.claude.com/mcp", name: "gmail" }]
-      })
+    const params = new URLSearchParams({
+      action:   'enviarReporte',
+      periodo,
+      titulo,
+      totIng,
+      totEgr,
+      bal,
+      saldo:    getSaldo(),
+      numMovs:  all.length
     });
+    const res  = await fetch(scriptUrl + '?' + params, { redirect: 'follow' });
     const data = await res.json();
-    const txt = data.content?.filter(c=>c.type==='text').map(c=>c.text).join('') || '';
-    showToast(res.ok && txt.includes('ENVIADO') ? '✅ Reporte enviado y abierto' : '📄 Reporte abierto (revisar correo)');
+    if (data.ok) {
+      showToast('✅ Reporte enviado a los 3 destinatarios');
+    } else {
+      showToast('📄 Reporte abierto — error al enviar: ' + (data.error || ''));
+    }
   } catch(e) {
-    showToast('📄 Reporte abierto — sin conexión de correo');
+    showToast('📄 Reporte abierto — no se pudo enviar el correo');
   }
 }
 
 // ── BACKUP POR CORREO (solo a Diego) ──────────
+// El envío lo hace el Apps Script usando MailApp — funciona desde cualquier navegador
 async function enviarBackupEmail() {
-  const now = new Date();
-  const fechaLabel = now.toLocaleDateString('es-CO', {day:'2-digit', month:'long', year:'numeric'});
-  const all = allMovs();
-  let saldo = SALDO_INICIAL;
-  const lineas = all.map(m => {
-    saldo += m.tipo==='ingreso' ? m.monto : -m.monto;
-    const debe  = m.tipo==='ingreso' ? fmt(m.monto).padStart(14) : ''.padStart(14);
-    const haber = m.tipo==='egreso'  ? fmt(m.monto).padStart(14) : ''.padStart(14);
-    return `${getMesLabel(m.fecha).padEnd(16)} | ${m.descripcion.slice(0,40).padEnd(40)} | ${debe} | ${haber} | ${fmt(saldo).padStart(14)}`;
-  }).join('\n');
-
-  const totIng = all.reduce((s,m)=>m.tipo==='ingreso'?s+m.monto:s, 0);
-  const totEgr = all.reduce((s,m)=>m.tipo==='egreso' ?s+m.monto:s, 0);
-
-  const cuerpo = `Backup automático — Terrazas de Salónica
-Fecha: ${fechaLabel}
-Registros: ${all.length} movimientos
-
-RESUMEN
-Saldo inicial 2026:  ${fmt(SALDO_INICIAL)}
-Total ingresos:      ${fmt(totIng)}
-Total egresos:       ${fmt(totEgr)}
-Saldo disponible:    ${fmt(getSaldo())}
-
-DETALLE COMPLETO
-${'─'.repeat(100)}
-${'Mes'.padEnd(16)} | ${'Concepto'.padEnd(40)} | ${'Debe'.padStart(14)} | ${'Haber'.padStart(14)} | ${'Saldo'.padStart(14)}
-${'─'.repeat(100)}
-${lineas}
-${'─'.repeat(100)}
-
-Este correo es un respaldo automático generado desde la app Terrazas de Salónica.`;
-
+  if (!scriptUrl) {
+    showToast('⚠️ Configura la URL del script en ⚙️ Config');
+    return;
+  }
   showToast('⏳ Enviando backup...');
   try {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 1000,
-        system: "Eres un asistente que envía correos usando Gmail MCP. Usa la herramienta gmail para enviar el correo exactamente como se indica. Responde solo 'ENVIADO' si fue exitoso.",
-        messages: [{ role: "user", content: `Envía este correo:\n\nPara: ${BACKUP_EMAIL}\nAsunto: 📦 Backup Terrazas de Salónica — ${fechaLabel}\n\n${cuerpo}` }],
-        mcp_servers: [{ type: "url", url: "https://gmail.mcp.claude.com/mcp", name: "gmail" }]
-      })
-    });
+    const res = await fetch(scriptUrl + '?action=enviarBackup', { redirect: 'follow' });
     const data = await res.json();
-    const txt = data.content?.filter(c=>c.type==='text').map(c=>c.text).join('') || '';
-    showToast(res.ok && txt.includes('ENVIADO') ? '✅ Backup enviado a tu correo' : '⚠️ No se pudo enviar el backup');
+    if (data.ok) {
+      showToast('✅ Backup enviado a diegoosoc@gmail.com');
+    } else {
+      showToast('⚠️ Error: ' + (data.error || 'desconocido'));
+    }
   } catch(e) {
-    showToast('⚠️ Sin conexión — backup no enviado');
+    showToast('⚠️ No se pudo conectar con el script');
   }
 }
 
