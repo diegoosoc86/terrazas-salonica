@@ -190,7 +190,7 @@
         <div class="header-title">Terrazas de Salónica</div>
         <div class="header-sub">Administración · Cuentas</div>
       </div>
-      <div class="version-badge">v2.0</div>
+      <div class="version-badge">v2.1</div>
     </div>
     <div class="saldo-strip">
       <div>
@@ -754,10 +754,16 @@ async function saveManual(){
 }
 async function addMov(m){
   if (!scriptUrl) { showToast('⚠️ Configura la URL del script en ⚙️ Config'); return; }
-  // Calcular saldo hasta este movimiento
+
+  // ── Optimistic UI: actualizar pantalla inmediatamente ──
+  movimientos.push(m);
+  guardarSaldoLocal();
+  refresh();
+  showToast('✓ Registrado');
+
+  // ── Enviar al Sheet en segundo plano ──────────────────
   const saldoCorrido = Math.round(
-    [...movimientos, m].sort((a,b)=>a.fecha.localeCompare(b.fecha))
-    .reduce((s,x)=>x.tipo==='ingreso'?s+x.monto:s-x.monto, SALDO_INICIAL)
+    allMovs().reduce((s,x)=>x.tipo==='ingreso'?s+x.monto:s-x.monto, SALDO_INICIAL)
   );
   const payload = {
     action: 'addMovimiento',
@@ -767,18 +773,12 @@ async function addMov(m){
     haber: m.tipo==='egreso'  ? m.monto : 0,
     saldo: saldoCorrido
   };
-  showToast('⏳ Guardando...');
   try {
-    const res = await fetch(scriptUrl + '?' + new URLSearchParams(payload));
+    const res  = await fetch(scriptUrl + '?' + new URLSearchParams(payload));
     const data = await res.json();
-    if (data.ok) {
-      await loadFromSheets(); // refrescar desde el Sheet
-      showToast('✓ Registrado');
-    } else {
-      showToast('⚠️ Error: ' + (data.error || 'desconocido'));
-    }
+    if (!data.ok) showToast('⚠️ No se sincronizó con Sheets: ' + (data.error||''));
   } catch(e) {
-    showToast('⚠️ Sin conexión al Sheet');
+    showToast('⚠️ Sin conexión — datos guardados localmente');
   }
 }
 
@@ -814,19 +814,22 @@ async function saveEdit(){
     debe:  m.tipo==='ingreso' ? Math.round(monto) : 0,
     haber: m.tipo==='egreso'  ? Math.round(monto) : 0,
   };
-  showToast('⏳ Guardando...');
+  // ── Optimistic UI: actualizar localmente primero ────────
+  m.descripcion = desc;
+  m.monto       = Math.round(monto);
+  m.fecha       = mes;
+  closeModal('modal-editar'); editingId = null;
+  guardarSaldoLocal();
+  refresh();
+  showToast('✓ Movimiento actualizado');
+
+  // ── Sincronizar con Sheet en segundo plano ─────────────
   try {
-    const res = await fetch(scriptUrl + '?' + new URLSearchParams(payload));
+    const res  = await fetch(scriptUrl + '?' + new URLSearchParams(payload));
     const data = await res.json();
-    if (data.ok) {
-      closeModal('modal-editar'); editingId=null;
-      await loadFromSheets();
-      showToast('✓ Movimiento actualizado');
-    } else {
-      showToast('⚠️ Error: ' + (data.error || 'desconocido'));
-    }
+    if (!data.ok) showToast('⚠️ No se sincronizó: ' + (data.error||''));
   } catch(e) {
-    showToast('⚠️ Sin conexión al Sheet');
+    showToast('⚠️ Sin conexión — cambio guardado localmente');
   }
 }
 
@@ -839,21 +842,21 @@ function askDelete(id,desc){
 function closeConfirm(){pendingDeleteId=null;document.getElementById('confirm-bg').classList.remove('open');}
 async function confirmDelete(){
   if(!scriptUrl){showToast('⚠️ Configura la URL del script en ⚙️ Config');closeConfirm();return;}
-  showToast('⏳ Eliminando...');
+  // ── Optimistic UI: eliminar localmente primero ───────────
+  const idToDelete = pendingDeleteId;
+  movimientos = movimientos.filter(m => m.id !== idToDelete);
+  closeConfirm();
+  guardarSaldoLocal();
+  refresh();
+  showToast('Movimiento eliminado');
+
+  // ── Sincronizar con Sheet en segundo plano ─────────────
   try {
-    const res = await fetch(scriptUrl + '?action=deleteMovimiento&id=' + encodeURIComponent(pendingDeleteId));
+    const res  = await fetch(scriptUrl + '?action=deleteMovimiento&id=' + encodeURIComponent(idToDelete));
     const data = await res.json();
-    if (data.ok) {
-      closeConfirm();
-      await loadFromSheets();
-      showToast('Movimiento eliminado');
-    } else {
-      closeConfirm();
-      showToast('⚠️ Error: ' + (data.error || 'desconocido'));
-    }
+    if (!data.ok) showToast('⚠️ No se sincronizó: ' + (data.error||''));
   } catch(e) {
-    closeConfirm();
-    showToast('⚠️ Sin conexión al Sheet');
+    showToast('⚠️ Sin conexión — eliminación guardada localmente');
   }
 }
 
@@ -1033,6 +1036,25 @@ document.querySelectorAll('.modal-bg').forEach(bg=>{
 // URL del Google Apps Script — se configura una vez y se guarda
 let scriptUrl = '';
 
+// ── Guardar/cargar último saldo conocido localmente ───────
+function guardarSaldoLocal() {
+  try {
+    localStorage.setItem('terrazas_movs_cache', JSON.stringify(movimientos));
+    localStorage.setItem('terrazas_saldo_inicial', SALDO_INICIAL);
+  } catch(e){}
+}
+function cargarCacheLocal() {
+  try {
+    const cache = localStorage.getItem('terrazas_movs_cache');
+    if (cache) {
+      movimientos = JSON.parse(cache);
+      sheetsLoaded = true; // tratar como cargado para mostrar saldo
+    }
+    const si = localStorage.getItem('terrazas_saldo_inicial');
+    if (si) SALDO_INICIAL = parseFloat(si);
+  } catch(e){}
+}
+
 async function loadScriptUrl() {
   try {
     // Intentar window.storage primero
@@ -1101,6 +1123,7 @@ async function loadFromSheets() {
       movimientos = data.movimientos || [];
       if (data.saldoInicial) SALDO_INICIAL = data.saldoInicial;
       sheetsLoaded = true;
+      guardarSaldoLocal(); // guardar cache para próxima apertura
       refresh();
       renderConfig();
     } else {
@@ -1173,12 +1196,13 @@ function refresh(){
 }
 async function init(){
   await loadScriptUrl();
+  cargarCacheLocal();  // mostrar último saldo conocido inmediatamente
   populateMesSelects();
-  refresh();       // render inmediato con datos vacíos
+  refresh();
   renderConfig();
-  // Si hay URL configurada, cargar datos del Sheet automáticamente
+  // Actualizar desde el Sheet en segundo plano
   if (scriptUrl) {
-    await loadFromSheets();
+    loadFromSheets(); // sin await — no bloquea la UI
   }
 }
 init();
